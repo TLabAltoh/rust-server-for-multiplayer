@@ -1,0 +1,54 @@
+[package]
+name = "webrtc-sfu"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = [
+    ".",
+    "libs/libwish",
+    "libs/signal",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.7.4", features = ["multipart", "tracing", "ws"] }
+axum-extra = { version = "0.9.3", features = ["query"] }
+hyper = { version = "1.3.1", features = ["full"] }
+tower-http = { version = "0.5.2", features = ["fs", "auth", "trace", "cors"] }
+tokio = { version = "1.32.0", features = ["full"] }
+tokio-util = { version = "0.7.10", features = ["codec"] }
+futures-util = { version = "0.3", default-features = false }
+mime_guess = "2.0.4"
+clap = { version = "4.5.1", features = ["derive"] }
+rust-embed = { version = "8.4", features = ["axum-ex"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+http = "1.0.0"
+http-body = "1.0.0"
+http-body-util = "0.1"
+env_logger = "0.10"
+anyhow = "1"
+form_urlencoded = "1"
+pin-project-lite = "0.2.4"
+chrono = "0.4.28"
+log = "0.4"
+bytes = "1"
+lazy_static = "1"
+rand = "0.8"
+md5 = "0.7.0"
+toml = "0.8.10"
+base64 = "0.22.1"
+tracing = "0.1.40"
+prometheus = "0.13.3"
+local-ip-address = "0.6.1"
+reqwest = { version = "0.11.24", features = [
+    "rustls-tls",
+], default-features = false }
+
+libwish = { path = "libs/libwish" }
+utils = { path = "libs/utils" }
+signal = { path = "libs/signal" }
+
+webrtc = { git = "https://github.com/webrtc-rs/webrtc.git", version = "0.11.0" }

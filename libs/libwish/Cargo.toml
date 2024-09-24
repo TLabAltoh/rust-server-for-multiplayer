@@ -1,0 +1,19 @@
+[package]
+name = "libwish"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+anyhow = "1.0"
+reqwest = { version = "0.12.4", features = [
+    "rustls-tls",
+], default-features = false }
+parse_link_header = "0.3"
+base64 = "0.22.1"
+url = "2.5"
+
+webrtc = { git = "https://github.com/webrtc-rs/webrtc.git", version = "0.11.0" }

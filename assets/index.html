@@ -1,0 +1,305 @@
+<html>
+
+<head>
+	<meta charset="UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="stylesheet" type="text/css" href="/styles.css" />
+	<!-- <link rel="stylesheet" type="text/css" href="/assets/styles.css" /> -->
+	<script src="js/webrtc-sfu.js"></script>
+	<script src="js/script.js"></script>
+	<title>WebRTC-Chat-SFU</title>
+</head>
+
+<body>
+	<h1>WebRTC-Chat-SFU</h1>
+
+	<h2>Hello There</h2>
+	<h3>WebRTC-Chat-SFU is a sample project for creating a chat
+		application with <a href="https://webrtc.rs/">webrtc-rs</a>.
+		Communication is based on the WebRTC SFU protocol, so it's
+		easy to bind video and audio streams to an application, and
+		low-latency media is delivered to room clients.
+	</h3>
+	<hr>
+
+	<h2>Entrance</h2>
+	<h3>
+		What do you want to do? You can create a room or join the
+		room and participate in chat.
+	</h3>
+
+	<div class="wrap">
+		<div class="scroll">
+			<details open="true">
+				<summary>Room</summary>
+				<details open="true">
+					<summary>Info</summary>
+					<form id="room" action="room" method="post">
+						<table>
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Pass</label></th>
+								<td><input type="text" name="room_pass" value="password"><br></td>
+							</tr>
+						</table>
+
+						<input type="submit" value="show room info">
+					</form>
+					<input type="button" onclick="post('/room')" , value="enum rooms (only public)">
+				</details>
+
+				<details open="true">
+					<summary>Join</summary>
+					<form id="room/join" action="room/join" method="post">
+						<table>
+							<tr>
+								<th><label>User Name</label></th>
+								<td><input type="text" name="user_name" value="default"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Pass</label></th>
+								<td><input type="text" name="room_pass" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Master Key</label></th>
+								<td><input type="text" name="master_key" value="password"><br></td>
+							</tr>
+						</table>
+
+						<input type="submit" value="join room">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>Exit</summary>
+					<form id="room/exit" action="room/exit" method="post">
+						<table>
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Pass</label></th>
+								<td><input type="text" name="room_pass" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>User ID</label></th>
+								<td><input type="number" name="user_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>User Token</label></th>
+								<td><input type="number" name="user_token"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="exit room">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>Create</summary>
+					<form id="room/create" action="room/create" method="post">
+						<table>
+							<tr>
+								<th><label>Room Name</label></th>
+								<td><input type="text" name="room_name" value="default"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Capacity</label></th>
+								<td><input type="number" name="room_capacity" value=2><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Needs Host</label></th>
+								<td>
+									<input type="radio" name="needs_host" value=true>yes
+									<input type="radio" name="needs_host" value=false checked>no
+								</td>
+							</tr>
+
+							<tr>
+								<th><label>Is Public</label></th>
+								<td>
+									<input type="radio" name="is_public" value=true>yes
+									<input type="radio" name="is_public" value=false checked>no
+								</td>
+							</tr>
+
+							<tr>
+								<th><label>Room Pass</label></th>
+								<td><input type="text" name="room_pass" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Master Key</label></th>
+								<td><input type="text" name="master_key" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Description (Option)</label></th>
+								<td><input type="text" name="description" value="description"><br></td>
+							</tr>
+						</table>
+
+						<input type="submit" value="create room">
+					</form>
+					<button onclick="createClient();">create client</button>
+				</details>
+
+				<details open="true">
+					<summary>Delete</summary>
+					<form id="room/delete" action="room/delete" method="post">
+						<table>
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Master Key</label></th>
+								<td><input type="text" name="master_key" value="password"><br></td>
+							</tr>
+						</table>
+
+						<input type="submit" value="delete room">
+					</form>
+				</details>
+			</details>
+
+			<details>
+				<summary>WHIP</summary>
+				<details open="true">
+					<summary>Publish</summary>
+					<form id="stream/whip" action="stream/whip" method="post">
+						<table>
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Pass</label></th>
+								<td><input type="text" name="room_pass" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>User ID</label></th>
+								<td><input type="number" name="user_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>User Token</label></th>
+								<td><input type="number" name="user_token"><br></td>
+							</tr>
+							<tr>
+								<th><label>Stream</label></th>
+								<td><input type="text" name="stream" value="default"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="publish">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>DataChannel</summary>
+					<form id="send_message" action="send_message" method="post">
+						<table>
+							<tr>
+								<th><label>Message</label></th>
+								<td><input type="text" name="sender_message"><br></td>
+							</tr>
+							<tr>
+								<th><label>Received</label></th>
+								<td><label id="received_message">No Message ...</label></td>
+							</tr>
+						</table>
+
+						<input type="submit" value="send message">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>MediaTrack</summary>
+					<div id="container">
+						<video crossorigin="anonymous" id="leftVideo" width="256" playsinline controls loop muted>
+							<source
+								src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+								type="video/mp4" />
+							<p>This browser does not support the video element.</p>
+						</video>
+						<video id="rightVideo" width="256" playsinline autoplay muted></video>
+					</div>
+				</details>
+			</details>
+
+			<details open="true">
+				<summary>WHEP</summary>
+				<details open="true">
+					<summary>Subscribe</summary>
+					<form id="stream/whep" action="stream/whep" method="post">
+						<table>
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Pass</label></th>
+								<td><input type="text" name="room_pass" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>User ID</label></th>
+								<td><input type="number" name="user_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>User Token</label></th>
+								<td><input type="number" name="user_token"><br></td>
+							</tr>
+							<tr>
+								<th><label>Stream</label></th>
+								<td><input type="text" name="stream" value="default"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="subscribe">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>DataChannel</summary>
+					<form id="send_message" action="send_message" method="post">
+						<table>
+							<tr>
+								<th><label>Message</label></th>
+								<td><input type="text" name="sender_message"><br></td>
+							</tr>
+							<tr>
+								<th><label>Received</label></th>
+								<td><label id="received_message">No Message ...</label></td>
+							</tr>
+						</table>
+						<input type="submit" value="send message">
+					</form>
+				</details>
+			</details>
+		</div>
+	</div>
+</body>
+
+</html>

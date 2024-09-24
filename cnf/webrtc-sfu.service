@@ -1,0 +1,13 @@
+[Unit]
+Description=A very simple, high performance, edge WebRTC SFU
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/webrtc-chat-sfu
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
