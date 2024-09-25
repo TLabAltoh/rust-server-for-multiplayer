@@ -135,8 +135,9 @@ async fn main() -> Result<()> {
                 .merge(route::room::exit::route())
                 .merge(route::rtc::infos::route())
                 .merge(route::rtc::stream::route())
-                .merge(route::ws::whip::route())
-                .merge(route::ws::whep::route())
+                .merge(route::rtc::whip::route())
+                .merge(route::rtc::whep::route())
+                .merge(route::ws::route())
                 .layer(auth_layer),
         )
         .with_state(app_state.clone())
