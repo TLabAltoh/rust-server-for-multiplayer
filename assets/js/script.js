@@ -1,6 +1,8 @@
 //import { SfuPeerConnection } from "./webrtc-sfu.js";
+//import { SfuWebSocket } from "./ws-sfu.js";
 
 var peerConnection = new SfuPeerConnection();
+var websocket = new SfuWebSocket();
 
 // https://stackoverflow.com/questions/13905435/javascript-getting-specific-element-of-parent-by-name
 Element.prototype.getElementsByName = function (arg) {
@@ -55,7 +57,7 @@ async function post(action) {
 
 const forms = document.getElementsByTagName("form");
 
-const form_pattern0 = ["room", "room/join", "room/exit", "room/create", "room/delete", "stream/whip", "stream/whep", "stream/reforward", "stream/infos", "send_message"];
+const form_pattern0 = ["room", "room/join", "room/exit", "room/create", "room/delete", "stream/whip", "stream/whep", "stream/reforward", "stream/infos", "send_rtc_message", "ws/connect", "send_ws_message"];
 
 window.addEventListener('DOMContentLoaded', () => {
     for (var i = 0; i < forms.length; i++) {
@@ -84,7 +86,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 });
 
                 switch (action) {
-                    case "send_message":
+                    case "send_rtc_message":
                         peerConnection.sendData(json.sender_message);
                         break;
                     case "stream/whip":
@@ -92,6 +94,12 @@ window.addEventListener('DOMContentLoaded', () => {
                         break;
                     case "stream/whep":
                         peerConnection.whep(json);
+                        break;
+                    case "send_ws_message":
+                        websocket.send(json.sender_message);
+                        break;
+                    case "ws/connect":
+                        websocket.join(json);
                         break;
                     default:
                         const jsonStr = JSON.stringify(json);
@@ -124,27 +132,19 @@ window.addEventListener('DOMContentLoaded', () => {
                                     break;
                                 case "room/join":
                                     if (response.isJson) {
-                                        document.getElementById("room/exit").getElementsByName("user_id")[0].setAttribute("value", response.user_id);
-                                        document.getElementById("room/exit").getElementsByName("user_token")[0].setAttribute("value", response.user_token);
-
-                                        document.getElementById("stream/whip").getElementsByName("user_id")[0].setAttribute("value", response.user_id);
-                                        document.getElementById("stream/whip").getElementsByName("user_token")[0].setAttribute("value", response.user_token);
-
-                                        document.getElementById("stream/whep").getElementsByName("user_id")[0].setAttribute("value", response.user_id);
-                                        document.getElementById("stream/whep").getElementsByName("user_token")[0].setAttribute("value", response.user_token);
+                                        ["room/exit", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
+                                            document.getElementById(elem_id).getElementsByName("user_id")[0].setAttribute("value", response.user_id);
+                                            document.getElementById(elem_id).getElementsByName("user_token")[0].setAttribute("value", response.user_token);
+                                        });
                                     }
                                     break;
                                 case "room/exit":
                                     break;
                                 case "room/create":
                                     if (response.isJson) {
-                                        document.getElementById("room").getElementsByName("room_id")[0].setAttribute("value", response.room_id);
-                                        document.getElementById("room/join").getElementsByName("room_id")[0].setAttribute("value", response.room_id);
-                                        document.getElementById("room/exit").getElementsByName("room_id")[0].setAttribute("value", response.room_id);
-                                        document.getElementById("room/delete").getElementsByName("room_id")[0].setAttribute("value", response.room_id);
-
-                                        document.getElementById("stream/whip").getElementsByName("room_id")[0].setAttribute("value", response.room_id);
-                                        document.getElementById("stream/whep").getElementsByName("room_id")[0].setAttribute("value", response.room_id);
+                                        ["room", "room/join", "room/exit", "room/delete", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
+                                            document.getElementById(elem_id).getElementsByName("room_id")[0].setAttribute("value", response.room_id);
+                                        });
                                     }
                                     break;
                                 case "room/delete":
@@ -183,12 +183,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (queries["room_id"]) {
         var room_id = Number(queries["room_id"]);
 
-        document.getElementById("room").getElementsByName("room_id")[0].setAttribute("value", room_id);
-        document.getElementById("room/join").getElementsByName("room_id")[0].setAttribute("value", room_id);
-        document.getElementById("room/exit").getElementsByName("room_id")[0].setAttribute("value", room_id);
-        document.getElementById("room/delete").getElementsByName("room_id")[0].setAttribute("value", room_id);
-
-        document.getElementById("stream/whip").getElementsByName("room_id")[0].setAttribute("value", room_id);
-        document.getElementById("stream/whep").getElementsByName("room_id")[0].setAttribute("value", room_id);
+        ["room", "room/join", "room/exit", "room/delete", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
+            document.getElementById(elem_id).getElementsByName("room_id")[0].setAttribute("value", room_id);
+        });
     }
 });

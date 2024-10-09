@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use libws::GroupsManager;
+
 use crate::config::Config;
 use crate::forward::rtc::client::Client;
 use crate::result::Result;
@@ -26,6 +28,7 @@ pub struct Room {
     description: String,
 
     forwarder: Arc<RwLock<Forwarder>>,
+    group_manager: Arc<RwLock<GroupsManager<Vec<u8>>>>,
 }
 
 impl Room {
@@ -44,6 +47,7 @@ impl Room {
         let forwarder = Arc::new(RwLock::new(Forwarder::new(ForwarderConfig::from_config(
             config.clone(),
         ))));
+        let group_manager = Arc::new(RwLock::new(GroupsManager::new()));
 
         let room: Room = Self {
             id: id,
@@ -62,6 +66,7 @@ impl Room {
             description: description,
 
             forwarder: forwarder,
+            group_manager: group_manager,
             //cfg: cfg,
         };
 
@@ -90,6 +95,10 @@ impl Room {
 
     pub fn forwarder(&self) -> Arc<RwLock<Forwarder>> {
         self.forwarder.clone()
+    }
+
+    pub fn group_manager(&self) -> Arc<RwLock<GroupsManager<Vec<u8>>>> {
+        self.group_manager.clone()
     }
 
     pub fn description(&self) -> String {

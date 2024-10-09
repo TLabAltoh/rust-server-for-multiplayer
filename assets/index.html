@@ -6,7 +6,15 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<link rel="stylesheet" type="text/css" href="/styles.css" />
 	<!-- <link rel="stylesheet" type="text/css" href="/assets/styles.css" /> -->
+
+	<!-- icon -->
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+	<link rel="apple-touch-icon" href="https://imgur.com/qbtnxAZ.png" sizes="180x180">
+	<link rel="icon" type="image/png" href="https://imgur.com/gmfx8ZI.png" sizes="192x192">
+	<!-- icon -->
+
 	<script src="js/webrtc-sfu.js"></script>
+	<script src="js/ws-sfu.js"></script>
 	<script src="js/script.js"></script>
 	<title>WebRTC-Chat-SFU</title>
 </head>
@@ -31,6 +39,28 @@
 
 	<div class="wrap">
 		<div class="scroll">
+			<template id="auth">
+				<tr>
+					<th><label>Room ID</label></th>
+					<td><input type="number" name="room_id"><br></td>
+				</tr>
+
+				<tr>
+					<th><label>Room Pass</label></th>
+					<td><input type="text" name="room_pass" value="password"><br></td>
+				</tr>
+
+				<tr>
+					<th><label>User ID</label></th>
+					<td><input type="number" name="user_id"><br></td>
+				</tr>
+
+				<tr>
+					<th><label>User Token</label></th>
+					<td><input type="number" name="user_token"><br></td>
+				</tr>
+			</template>
+
 			<details open="true">
 				<summary>Room</summary>
 				<details open="true">
@@ -47,10 +77,9 @@
 								<td><input type="text" name="room_pass" value="password"><br></td>
 							</tr>
 						</table>
-
-						<input type="submit" value="show room info">
 					</form>
-					<input type="button" onclick="post('/room')" , value="enum rooms (only public)">
+					<input type="submit" form="room" class="button_submit" value="show room info">
+					<input type="button" class="button_submit" onclick="post('/room')" , value="enum rooms">
 				</details>
 
 				<details open="true">
@@ -78,7 +107,7 @@
 							</tr>
 						</table>
 
-						<input type="submit" value="join room">
+						<input type="submit" class="button_submit" value="join room">
 					</form>
 				</details>
 
@@ -86,27 +115,9 @@
 					<summary>Exit</summary>
 					<form id="room/exit" action="room/exit" method="post">
 						<table>
-							<tr>
-								<th><label>Room ID</label></th>
-								<td><input type="number" name="room_id"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>Room Pass</label></th>
-								<td><input type="text" name="room_pass" value="password"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>User ID</label></th>
-								<td><input type="number" name="user_id"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>User Token</label></th>
-								<td><input type="number" name="user_token"><br></td>
-							</tr>
+							<div id="auth_container"></div>
 						</table>
-						<input type="submit" value="exit room">
+						<input type="submit" class="button_submit" value="exit room">
 					</form>
 				</details>
 
@@ -155,10 +166,9 @@
 								<td><input type="text" name="description" value="description"><br></td>
 							</tr>
 						</table>
-
-						<input type="submit" value="create room">
 					</form>
-					<button onclick="createClient();">create client</button>
+					<input type="submit" form="room/create" class="button_submit" value="create room">
+					<input type="button" class="button_submit" onclick="createClient();" value="create client">
 				</details>
 
 				<details open="true">
@@ -176,7 +186,7 @@
 							</tr>
 						</table>
 
-						<input type="submit" value="delete room">
+						<input type="submit" class="button_submit" value="delete room">
 					</form>
 				</details>
 			</details>
@@ -186,50 +196,27 @@
 				<details open="true">
 					<summary>Publish</summary>
 					<form id="stream/whip" action="stream/whip" method="post">
-						<table>
-							<tr>
-								<th><label>Room ID</label></th>
-								<td><input type="number" name="room_id"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>Room Pass</label></th>
-								<td><input type="text" name="room_pass" value="password"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>User ID</label></th>
-								<td><input type="number" name="user_id"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>User Token</label></th>
-								<td><input type="number" name="user_token"><br></td>
-							</tr>
+						<table id="auth_container">
 							<tr>
 								<th><label>Stream</label></th>
 								<td><input type="text" name="stream" value="default"><br></td>
 							</tr>
 						</table>
-						<input type="submit" value="publish">
+						<input type="submit" class="button_submit" value="publish">
 					</form>
 				</details>
 
 				<details open="true">
 					<summary>DataChannel</summary>
-					<form id="send_message" action="send_message" method="post">
+					<form id="send_rtc_message" action="send_rtc_message" method="post">
 						<table>
 							<tr>
 								<th><label>Message</label></th>
 								<td><input type="text" name="sender_message"><br></td>
 							</tr>
-							<tr>
-								<th><label>Received</label></th>
-								<td><label id="received_message">No Message ...</label></td>
-							</tr>
 						</table>
 
-						<input type="submit" value="send message">
+						<input type="submit" class="button_submit" value="send message">
 					</form>
 				</details>
 
@@ -252,52 +239,66 @@
 				<details open="true">
 					<summary>Subscribe</summary>
 					<form id="stream/whep" action="stream/whep" method="post">
-						<table>
-							<tr>
-								<th><label>Room ID</label></th>
-								<td><input type="number" name="room_id"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>Room Pass</label></th>
-								<td><input type="text" name="room_pass" value="password"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>User ID</label></th>
-								<td><input type="number" name="user_id"><br></td>
-							</tr>
-
-							<tr>
-								<th><label>User Token</label></th>
-								<td><input type="number" name="user_token"><br></td>
-							</tr>
+						<table id="auth_container">
 							<tr>
 								<th><label>Stream</label></th>
 								<td><input type="text" name="stream" value="default"><br></td>
 							</tr>
 						</table>
-						<input type="submit" value="subscribe">
+						<input type="submit" class="button_submit" value="subscribe">
 					</form>
 				</details>
 
 				<details open="true">
 					<summary>DataChannel</summary>
-					<form id="send_message" action="send_message" method="post">
+					<form id="send_rtc_message" action="send_rtc_message" method="post">
 						<table>
 							<tr>
 								<th><label>Message</label></th>
 								<td><input type="text" name="sender_message"><br></td>
 							</tr>
-							<tr>
-								<th><label>Received</label></th>
-								<td><label id="received_message">No Message ...</label></td>
-							</tr>
 						</table>
-						<input type="submit" value="send message">
+						<input type="submit" class="button_submit" value="send message">
 					</form>
 				</details>
 			</details>
+
+			<details open="true">
+				<summary>WebSocket</summary>
+				<details open="true">
+					<summary>Join</summary>
+					<form id="ws/connect" action="ws/connect" method="post">
+						<table id="auth_container">
+							<tr>
+								<th><label>Channel</label></th>
+								<td><input type="text" name="channel" value="default"><br></td>
+							</tr>
+						</table>
+						<input type="submit" class="button_submit" value="join group">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>Socket</summary>
+					<form id="send_ws_message" action="send_ws_message" method="post">
+						<table>
+							<tr>
+								<th><label>Message</label></th>
+								<td><input type="text" name="sender_message"><br></td>
+							</tr>
+						</table>
+						<input type="submit" class="button_submit" value="send message">
+					</form>
+				</details>
+			</details>
+
+			<script>
+				var template = document.getElementById("auth");
+				document.querySelectorAll("#auth_container").forEach((elem) => {
+					var clone = template.content.cloneNode(true);
+					elem.insertBefore(clone, elem.firstElementChild)
+				});
+			</script>
 		</div>
 	</div>
 </body>

@@ -50,6 +50,11 @@ async fn room_exit(Path(params): Path<HashMap<String, String>>) -> Result<Respon
     if rooms.contains_key(&json.room_id) {
         let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
         if room.check_password(json.room_pass.clone()) {
+            let group_manager = room.group_manager();
+            let group_manager = group_manager.write().await;
+            group_manager.end_user(json.user_id.to_string()).await;
+            drop(group_manager);
+
             if room
                 .user_delete(json.user_id.clone(), json.user_token.clone(), true)
                 .await?

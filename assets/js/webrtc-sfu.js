@@ -84,7 +84,7 @@ class SfuPeerConnection {
 
   sendData(data) {
     this.dataChannel.send(data);
-    console.log('Sent Data: ' + data);
+    console.log('Send Data: ' + data);
   }
 
   closeDataChannels() {
@@ -107,15 +107,15 @@ class SfuPeerConnection {
 
     console.log("json:" + jsonStr);
 
-    const sock = new WebSocket("ws://192.168.3.9:7777/" + this.action + "/" + jsonBase64 + "/");
+    const sock = new WebSocket("ws://localhost:7777/" + this.action + "/" + jsonBase64 + "/");
     this.sock = sock;
 
     sock.addEventListener("open", e => {
-      console.log("[ws] open: " + e);
+      console.log("[ws-rtc] open: " + e);
     });
 
     sock.addEventListener("message", e => {
-      console.log("[ws] message: " + e);
+      console.log("[ws-rtc] message: " + e);
       var json = JSON.parse(e.data);
       if (!json.is_candidate) {
         desc = new RTCSessionDescription({ type: 'answer', sdp: json.sdp });
@@ -128,11 +128,11 @@ class SfuPeerConnection {
     });
 
     sock.addEventListener("close", e => {
-      console.log("[ws] close: " + e);
+      console.log("[ws-rtc] close: " + e);
     });
 
     sock.addEventListener("error", e => {
-      console.log("[ws] error: " + e);
+      console.log("[ws-rtc] error: " + e);
     });
 
     this.remoteCandidateTask = setInterval(() => {

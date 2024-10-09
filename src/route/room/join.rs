@@ -67,12 +67,16 @@ async fn room_join(Path(params): Path<HashMap<String, String>>) -> Result<Respon
                 )
                 .await?
             {
+                let group_manager = room.group_manager();
+                let group_manager = group_manager.write().await;
+                group_manager.init_user(user_id.to_string(), None).await;
+                drop(group_manager);
+
                 let json = RESPONSE {
                     user_id: user_id.clone(),
                     user_token: user_token.clone(),
                 };
-                let mut body = String::default();
-                body.push_str(&serde_json::to_string(&json).unwrap());
+                let body = serde_json::to_string(&json).unwrap().to_string();
 
                 return Ok(http::create_response(Body::from(body), StatusCode::OK));
             } else {

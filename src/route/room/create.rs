@@ -63,9 +63,7 @@ async fn create_room(
         state.config,
     );
 
-    let mut body = String::default();
-    body.push_str(&serde_json::to_string(&room.info()).unwrap());
-
+    let body = serde_json::to_string(&room.info()).unwrap().to_string();
     rooms.insert(room_id, room);
 
     return Ok(http::create_response(Body::from(body), StatusCode::OK));
