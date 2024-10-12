@@ -19,7 +19,7 @@ use crate::route::AppState;
 use crate::ROOMS;
 
 pub fn route() -> Router<AppState> {
-    Router::new().route("/ws/connect/:json_base64/", get(channel))
+    Router::new().route("/ws/connect/:json_base64/", get(stream))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -28,10 +28,10 @@ struct JSON {
     room_pass: String,
     user_id: i32,
     user_token: u32,
-    channel: String,
+    stream: String,
 }
 
-async fn channel(
+async fn stream(
     Path(params): Path<HashMap<String, String>>,
     ws: WebSocketUpgrade,
 ) -> Result<Response> {
@@ -79,7 +79,7 @@ async fn channel(
         return Ok(ws.on_upgrade(|socket: WebSocket| {
             let json = json;
             Box::pin(async move {
-                let channel = json.channel;
+                let stream = json.stream;
                 let id = json.user_id as u32;
 
                 let mut rooms = ROOMS.lock().await;
@@ -98,7 +98,7 @@ async fn channel(
                 group_manager.init_user(id.to_string(), None).await;
 
                 let user_sender = group_manager
-                    .join_or_create(id.to_string(), channel.clone())
+                    .join_or_create(id.to_string(), stream.clone())
                     .await
                     .unwrap();
 
@@ -186,7 +186,7 @@ async fn channel(
                 let group_manager = room.group_manager();
                 let group_manager = group_manager.write().await;
                 let _ = group_manager
-                    .leave_group(channel.clone(), id.to_string())
+                    .leave_group(stream.clone(), id.to_string())
                     .await;
                 drop(group_manager);
 
