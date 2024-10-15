@@ -110,7 +110,7 @@ impl PeerForward {
                             let _ = pc.close().await;
                         }
                         RTCPeerConnectionState::Closed => {
-                            let _ = internal.remove_publish(pc).await;
+                            let _ = internal.remove_publish(id.clone(), pc).await;
                         }
                         _ => {}
                     };
@@ -179,7 +179,7 @@ impl PeerForward {
                         }
 
                         RTCPeerConnectionState::Closed => {
-                            let _ = internal.remove_subscribe(pc).await;
+                            let _ = internal.remove_subscribe(id.clone(), pc).await;
                         }
                         _ => {}
                     }

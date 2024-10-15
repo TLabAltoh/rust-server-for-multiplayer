@@ -83,7 +83,18 @@ class SfuPeerConnection {
   }
 
   sendData(data) {
-    this.dataChannel.send(data);
+    let byteHedder = this.i32ToUint8Array(to);
+    switch (typeof (message)) {
+      case "string":
+        let byteMessage = new TextEncoder().encode(message);
+        this.dataChannel.send(new Uint8Array([...byteHedder, ...byteMessage]));
+        console.log("[ws-sfu] send string");
+        break;
+      case "object":
+        byteMessage = message;
+        this.dataChannel.send(new Uint8Array([...byteHedder, ...byteMessage]));
+        break;
+    }
     console.log('Send Data: ' + data);
   }
 
@@ -183,7 +194,7 @@ class SfuPeerConnection {
   }
 
   onReceiveMessageCallback(event) {
-    console.log('Received Message');
+    console.log('Received Message: ' + new TextDecoder().decode(event.data));
   }
 
   ondataChannelStateChange() {

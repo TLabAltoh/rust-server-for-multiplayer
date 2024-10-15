@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/webrtc-chat-sfu
+ExecStart=/usr/bin/unity-rust-sfu
 Restart=on-failure
 RestartSec=5s
 

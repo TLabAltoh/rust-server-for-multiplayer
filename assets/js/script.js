@@ -57,11 +57,11 @@ async function post(action) {
 
 const forms = document.getElementsByTagName("form");
 
-const form_pattern0 = ["room", "room/join", "room/exit", "room/create", "room/delete", "stream/whip", "stream/whep", "stream/reforward", "stream/infos", "send_rtc_message", "ws/connect", "send_ws_message"];
+const form_action = ["room", "room/join", "room/exit", "room/create", "room/delete", "stream/whip", "stream/whep", "stream/reforward", "stream/infos", "send_rtc_message", "ws/connect", "send_ws_message"];
 
 window.addEventListener('DOMContentLoaded', () => {
     for (var i = 0; i < forms.length; i++) {
-        if (form_pattern0.includes(forms[i].getAttribute("action"))) {
+        if (form_action.includes(forms[i].getAttribute("action"))) {
             forms[i].addEventListener("submit", async event => {
                 event.preventDefault();
 
@@ -137,7 +137,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                             document.getElementById(elem_id).getElementsByName("user_token")[0].setAttribute("value", response.user_token);
                                         });
 
-                                        ["send_ws_message"].forEach((elem_id) => {
+                                        ["send_ws_message", "send_rtc_message_publish", "send_rtc_message_subscribe"].forEach((elem_id) => {
                                             document.getElementById(elem_id).getElementsByName("to")[0].setAttribute("value", response.user_id);
                                         });
                                     }

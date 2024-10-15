@@ -1,5 +1,7 @@
 use std::borrow::ToOwned;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::vec;
 
 use crate::forward::rtc::message::ForwardInfo;
 use crate::result::Result;
@@ -59,6 +61,7 @@ pub(crate) struct PeerForwardInternal {
     publish_tracks_change: (broadcast::Sender<()>, broadcast::Receiver<()>),
     publish_rtcp_channel: PublishRtcpChannel,
     subscribe_group: RwLock<Vec<SubscribeRTCPeerConnection>>,
+    user_sender_map: Arc<RwLock<HashMap<u32, broadcast::Sender<Vec<u8>>>>>,
     data_channel_forward: DataChannelForward,
     ice_server: Vec<RTCIceServer>,
     event_sender: broadcast::Sender<ForwardEvent>,
@@ -84,6 +87,7 @@ impl PeerForwardInternal {
             publish_tracks_change,
             publish_rtcp_channel: broadcast::channel(48),
             subscribe_group: RwLock::new(Vec::new()),
+            user_sender_map: Arc::new(RwLock::new(HashMap::new())),
             data_channel_forward,
             ice_server,
             event_sender,
@@ -145,8 +149,9 @@ impl PeerForwardInternal {
     async fn data_channel_forward(
         id: u32,
         dc: Arc<RTCDataChannel>,
-        sender: broadcast::Sender<Vec<u8>>,
-        receiver: broadcast::Receiver<Vec<u8>>,
+        group_sender: broadcast::Sender<Vec<u8>>,
+        user_sender: broadcast::Sender<Vec<u8>>,
+        user_sender_map: Arc<RwLock<HashMap<u32, broadcast::Sender<Vec<u8>>>>>,
     ) {
         let dc2 = dc.clone();
         dc.on_open(Box::new(move || {
@@ -159,8 +164,22 @@ impl PeerForwardInternal {
                     }
                 };
                 let r = Arc::clone(&raw);
-                tokio::spawn(Self::data_channel_read_loop(id.clone(), r, sender));
-                tokio::spawn(Self::data_channel_write_loop(id.clone(), raw, receiver));
+                tokio::spawn(Self::data_channel_read_loop(
+                    id.clone(),
+                    r,
+                    group_sender.clone(),
+                    user_sender_map,
+                ));
+                tokio::spawn(Self::data_channel_write_loop(
+                    id.clone(),
+                    raw,
+                    user_sender.subscribe(),
+                ));
+                tokio::spawn(Self::data_channel_broadcast_pipe_loop(
+                    id.clone(),
+                    user_sender.clone(),
+                    group_sender.subscribe(),
+                ));
             });
 
             Box::pin(async {})
@@ -170,11 +189,12 @@ impl PeerForwardInternal {
     async fn data_channel_read_loop(
         id: u32,
         d: Arc<DataChannel>,
-        sender: broadcast::Sender<Vec<u8>>,
+        group_sender: broadcast::Sender<Vec<u8>>,
+        user_sender_map: Arc<RwLock<HashMap<u32, broadcast::Sender<Vec<u8>>>>>,
     ) {
-        let mut buffer = vec![0u8; 4 + MESSAGE_SIZE];
+        let mut buffer = vec![0u8; 8 + MESSAGE_SIZE]; // from (0 ~ 3) + to (4 ~ 7)
         for i in 0..4 {
-            buffer[i] = (id >> ((3 - i) * 8)) as u8;
+            buffer[i] = (id >> (i * 8)) as u8;
         }
         loop {
             let n = match d.read(&mut buffer[4..]).await {
@@ -187,27 +207,54 @@ impl PeerForwardInternal {
             if n == 0 {
                 break;
             }
-            if let Err(err) = sender.send(buffer[..n + 4].to_vec()) {
-                info!("send data channel err: {}", err);
+
+            let is_broadcast = buffer[..4] == buffer[4..7];
+            if is_broadcast {
+                debug!("[rtc] send broadcast message");
+                if let Err(err) = group_sender.send(buffer[..n + 4].to_vec()) {
+                    info!("send data channel err: {}", err);
+                    return;
+                }
+            } else {
+                debug!("[rtc] send unicast message");
+                let to = u32::from_be_bytes([buffer[7], buffer[6], buffer[5], buffer[4]]);
+                let user_sender_map = user_sender_map.read().await;
+                if let Some(user_sender) = user_sender_map.get(&to) {
+                    if let Err(err) = user_sender.send(buffer[..n + 4].to_vec()) {
+                        info!("send data channel err: {}", err);
+                        return;
+                    };
+                }
+                drop(user_sender_map);
+            }
+        }
+    }
+
+    async fn data_channel_write_loop(
+        _id: u32,
+        d: Arc<DataChannel>,
+        mut user_receiver: broadcast::Receiver<Vec<u8>>,
+    ) {
+        while let Ok(msg) = user_receiver.recv().await {
+            if let Err(_err) = d.write(&msg[8..].to_vec().into()).await {
+                // Maybe stream has been closed
+                // info!("write data channel err: {}", _err);
                 return;
             };
         }
     }
 
-    async fn data_channel_write_loop(
+    async fn data_channel_broadcast_pipe_loop(
         id: u32,
-        d: Arc<DataChannel>,
-        mut receiver: broadcast::Receiver<Vec<u8>>,
+        user_sender: broadcast::Sender<Vec<u8>>,
+        mut group_receiver: broadcast::Receiver<Vec<u8>>,
     ) {
-        while let Ok(msg) = receiver.recv().await {
-            let mut msg_id: u32 = 0;
-            for i in 0..4 {
-                msg_id += (msg[i] as u32) << ((3 - i) * 8);
-            }
-            if msg_id == id {
+        while let Ok(msg) = group_receiver.recv().await {
+            let from = u32::from_be_bytes([msg[3], msg[2], msg[1], msg[0]]);
+            if from == id {
                 continue; // This message was sent from own
             }
-            if let Err(_err) = d.write(&msg[4..].to_vec().into()).await {
+            if let Err(_err) = user_sender.send(msg) {
                 // Maybe stream has been closed
                 // info!("write data channel err: {}", _err);
                 return;
@@ -256,7 +303,7 @@ impl PeerForwardInternal {
         Ok(())
     }
 
-    pub(crate) async fn remove_publish(&self, peer: Arc<RTCPeerConnection>) -> Result<()> {
+    pub(crate) async fn remove_publish(&self, id: u32, peer: Arc<RTCPeerConnection>) -> Result<()> {
         {
             let mut publish = self.publish.write().await;
             if publish.is_none() {
@@ -277,6 +324,11 @@ impl PeerForwardInternal {
             *publish_leave_time = Utc::now().timestamp_millis();
         }
         info!("[{}] [publish] set none", self.stream);
+
+        let mut user_sender_map = self.user_sender_map.write().await;
+        user_sender_map.remove(&id);
+        drop(user_sender_map);
+
         self.send_event(ForwardEventType::PublishDown, get_peer_id(&peer))
             .await;
         Ok(())
@@ -382,9 +434,22 @@ impl PeerForwardInternal {
         id: u32,
         dc: Arc<RTCDataChannel>,
     ) -> Result<()> {
-        let sender = self.data_channel_forward.sender.clone();
-        let receiver = self.data_channel_forward.sender.subscribe();
-        Self::data_channel_forward(id, dc, sender, receiver).await;
+        let group_sender = self.data_channel_forward.sender.clone();
+        let (user_sender, _user_receiver) = broadcast::channel(32);
+
+        let mut user_sender_map = self.user_sender_map.write().await;
+        user_sender_map.insert(id.clone(), user_sender.clone());
+        drop(user_sender_map);
+
+        Self::data_channel_forward(
+            id,
+            dc,
+            group_sender,
+            user_sender,
+            self.user_sender_map.clone(),
+        )
+        .await;
+
         Ok(())
     }
 }
@@ -466,7 +531,7 @@ impl PeerForwardInternal {
         })
     }
 
-    pub async fn remove_subscribe(&self, peer: Arc<RTCPeerConnection>) -> Result<()> {
+    pub async fn remove_subscribe(&self, id: u32, peer: Arc<RTCPeerConnection>) -> Result<()> {
         let mut flag = false;
         let session = get_peer_id(&peer);
         {
@@ -486,6 +551,11 @@ impl PeerForwardInternal {
         if flag {
             self.send_event(ForwardEventType::SubscribeDown, get_peer_id(&peer))
                 .await;
+
+            let mut user_sender_map = self.user_sender_map.write().await;
+            user_sender_map.remove(&id);
+            drop(user_sender_map);
+
             Ok(())
         } else {
             Err(AppError::throw("not found session"))
@@ -498,9 +568,22 @@ impl PeerForwardInternal {
         id: u32,
         dc: Arc<RTCDataChannel>,
     ) -> Result<()> {
-        let sender = self.data_channel_forward.sender.clone();
-        let receiver = self.data_channel_forward.sender.subscribe();
-        Self::data_channel_forward(id, dc, sender, receiver).await;
+        let group_sender = self.data_channel_forward.sender.clone();
+        let (user_sender, _user_receiver) = broadcast::channel(32);
+
+        let mut user_sender_map = self.user_sender_map.write().await;
+        user_sender_map.insert(id.clone(), user_sender.clone());
+        drop(user_sender_map);
+
+        Self::data_channel_forward(
+            id,
+            dc,
+            group_sender,
+            user_sender,
+            self.user_sender_map.clone(),
+        )
+        .await;
+
         Ok(())
     }
 

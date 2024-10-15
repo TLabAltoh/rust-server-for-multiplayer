@@ -208,8 +208,12 @@
 
 				<details open="true">
 					<summary>DataChannel</summary>
-					<form id="send_rtc_message" action="send_rtc_message" method="post">
+					<form id="send_rtc_message_publish" action="send_rtc_message" method="post">
 						<table>
+							<tr>
+								<th><label>To</label></th>
+								<td><input type="number" name="to"><br></td>
+							</tr>
 							<tr>
 								<th><label>Message</label></th>
 								<td><input type="text" name="sender_message"><br></td>
@@ -251,8 +255,12 @@
 
 				<details open="true">
 					<summary>DataChannel</summary>
-					<form id="send_rtc_message" action="send_rtc_message" method="post">
+					<form id="send_rtc_message_subscribe" action="send_rtc_message" method="post">
 						<table>
+							<tr>
+								<th><label>To</label></th>
+								<td><input type="number" name="to"><br></td>
+							</tr>
 							<tr>
 								<th><label>Message</label></th>
 								<td><input type="text" name="sender_message"><br></td>
