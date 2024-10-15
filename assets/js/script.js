@@ -96,7 +96,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         peerConnection.whep(json);
                         break;
                     case "send_ws_message":
-                        websocket.send(json.sender_message);
+                        websocket.send(json.sender_message, json.to);
                         break;
                     case "ws/connect":
                         websocket.join(json);
@@ -105,8 +105,8 @@ window.addEventListener('DOMContentLoaded', () => {
                         const jsonStr = JSON.stringify(json);
                         const jsonBase64 = btoa(jsonStr);
 
-                        console.log("jsonStr: " + jsonStr);
-                        console.log("jsonBase64: " + jsonBase64);
+                        // console.log("jsonStr: " + jsonStr);
+                        // console.log("jsonBase64: " + jsonBase64);
 
                         try {
                             var response = window.fetch(action + "/" + jsonBase64 + "/", {
@@ -135,6 +135,10 @@ window.addEventListener('DOMContentLoaded', () => {
                                         ["room/exit", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
                                             document.getElementById(elem_id).getElementsByName("user_id")[0].setAttribute("value", response.user_id);
                                             document.getElementById(elem_id).getElementsByName("user_token")[0].setAttribute("value", response.user_token);
+                                        });
+
+                                        ["send_ws_message"].forEach((elem_id) => {
+                                            document.getElementById(elem_id).getElementsByName("to")[0].setAttribute("value", response.user_id);
                                         });
                                     }
                                     break;

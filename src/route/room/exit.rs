@@ -52,7 +52,7 @@ async fn room_exit(Path(params): Path<HashMap<String, String>>) -> Result<Respon
         if room.check_password(json.room_pass.clone()) {
             let group_manager = room.group_manager();
             let group_manager = group_manager.write().await;
-            group_manager.end_user(json.user_id.to_string()).await;
+            group_manager.end_user(json.user_id as u32).await;
             drop(group_manager);
 
             if room

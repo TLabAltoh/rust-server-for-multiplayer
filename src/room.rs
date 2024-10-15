@@ -28,7 +28,7 @@ pub struct Room {
     description: String,
 
     forwarder: Arc<RwLock<Forwarder>>,
-    group_manager: Arc<RwLock<GroupsManager<Vec<u8>>>>,
+    group_manager: Arc<RwLock<GroupsManager>>,
 }
 
 impl Room {
@@ -97,7 +97,7 @@ impl Room {
         self.forwarder.clone()
     }
 
-    pub fn group_manager(&self) -> Arc<RwLock<GroupsManager<Vec<u8>>>> {
+    pub fn group_manager(&self) -> Arc<RwLock<GroupsManager>> {
         self.group_manager.clone()
     }
 

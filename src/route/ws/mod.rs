@@ -10,7 +10,7 @@ use http::BodyUtil;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::http;
 use crate::result::Result;
@@ -95,14 +95,14 @@ async fn stream(
 
                 drop(rooms);
 
-                group_manager.init_user(id.to_string(), None).await;
+                group_manager.init_user(id).await;
 
-                let user_sender = group_manager
-                    .join_or_create(id.to_string(), stream.clone())
+                let group_sender = group_manager
+                    .join_or_create(id, stream.clone())
                     .await
                     .unwrap();
 
-                let user_receiver = group_manager.get_user_receiver(id.to_string()).await;
+                let user_receiver = group_manager.get_user_receiver(stream.clone(), id).await;
                 let mut user_receiver = match user_receiver {
                     Ok(user_receiver) => user_receiver,
                     Err(error) => {
@@ -115,59 +115,66 @@ async fn stream(
                     }
                 };
 
+                let user_sender_map = group_manager.get_user_sender_map(stream.clone()).await;
+                let user_sender_map = match user_sender_map {
+                    Ok(user_sender_map) => user_sender_map,
+                    Err(error) => {
+                        socekt_sender
+                            .send(Message::Text(error.to_string()))
+                            .await
+                            .unwrap();
+                        socekt_sender.close().await.unwrap();
+                        return;
+                    }
+                };
                 drop(group_manager);
 
                 debug!("[ws] start receive/send loop ...");
 
                 let mut send_task = tokio::spawn(async move {
-                    let id = id;
                     while let Ok(message) = user_receiver.recv().await {
-                        let mut msg_id: u32 = 0;
-                        for i in 0..4 {
-                            msg_id += (message[i] as u32) << ((3 - i) * 8);
-                        }
-                        if msg_id == id {
-                            continue; // This message was sent from own
-                        }
-                        match message[4] {
-                            0 => {
-                                // binary
-                                socekt_sender
-                                    .send(Message::Binary(message[5..].to_vec()))
-                                    .await
-                                    .unwrap();
-                            }
-                            1 => {
-                                // text
-                                socekt_sender
-                                    .send(Message::Text(
-                                        String::from_utf8(message[5..].to_vec()).unwrap(),
-                                    ))
-                                    .await
-                                    .unwrap();
-                            }
-                            2.. => {}
-                        };
+                        socekt_sender
+                            .send(Message::Binary(message.to_vec()))
+                            .await
+                            .unwrap();
                     }
                 });
 
                 let mut recv_task = tokio::spawn(async move {
                     let id = id;
-                    let mut header = vec![0u8; 5]; // user_id (0 ~ 3) + message_type (4)
+                    let mut header = vec![0u8; 4]; // from (0 ~ 3) + to (4 ~ 7)
                     for i in 0..4 {
-                        header[i] = (id >> ((3 - i) * 8)) as u8;
+                        header[i] = (id >> (i * 8)) as u8;
                     }
                     while let Some(Ok(message)) = socket_receiver.next().await {
                         match message {
+                            // Unity's NativeWebSocket handles both text and binary as a
+                            // byte array in the message receive callback. So this
+                            // server only uses binary for WebSocket.
                             Message::Binary(binary) => {
-                                header[4] = 0;
-                                user_sender.send([header.clone(), binary].concat()).unwrap();
+                                debug!("received binary message: {:?}", &binary);
+                                let is_broadcast = header[..4] == binary[..4];
+                                if is_broadcast {
+                                    debug!("send broadcast message");
+                                    group_sender
+                                        .send([header.clone(), binary].concat())
+                                        .unwrap();
+                                } else {
+                                    debug!("send unicast message");
+                                    let to = u32::from_be_bytes([
+                                        binary[3], binary[2], binary[1], binary[0],
+                                    ]);
+                                    let user_sender_map = user_sender_map.read().unwrap();
+                                    if let Some(user_sender) = user_sender_map.get(&to) {
+                                        user_sender
+                                            .send([header.clone(), binary].concat())
+                                            .unwrap();
+                                    }
+                                    drop(user_sender_map);
+                                }
                             }
                             Message::Text(text) => {
-                                header[4] = 1;
-                                user_sender
-                                    .send([header.clone(), text.into_bytes()].concat())
-                                    .unwrap();
+                                warn!("received text message. this message will not be processed.: {}", text);
                             }
                             Message::Ping(_vec) => {}
                             Message::Pong(_vec) => {}
@@ -185,9 +192,7 @@ async fn stream(
                 let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
                 let group_manager = room.group_manager();
                 let group_manager = group_manager.write().await;
-                let _ = group_manager
-                    .leave_group(stream.clone(), id.to_string())
-                    .await;
+                let _ = group_manager.leave_group(stream.clone(), id).await;
                 drop(group_manager);
 
                 println!("[ws] connection closed");
