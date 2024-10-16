@@ -1,5 +1,6 @@
-class SfuPeerConnection {
+class SfuPeerConnection extends SfuClient {
   constructor() {
+    super();
     this.peerConnection;
     this.dataChannel;
   }
@@ -82,7 +83,7 @@ class SfuPeerConnection {
     console.log('Failed to create session description: ' + error.toString());
   }
 
-  sendData(data) {
+  send(message, to) {
     let byteHedder = this.i32ToUint8Array(to);
     switch (typeof (message)) {
       case "string":
@@ -95,7 +96,7 @@ class SfuPeerConnection {
         this.dataChannel.send(new Uint8Array([...byteHedder, ...byteMessage]));
         break;
     }
-    console.log('Send Data: ' + data);
+    console.log('Send Message: ' + message);
   }
 
   closeDataChannels() {

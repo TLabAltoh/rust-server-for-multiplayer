@@ -1,5 +1,6 @@
 class SfuWebSocket extends SfuClient {
     constructor() {
+        super();
         this.sock;
     }
 

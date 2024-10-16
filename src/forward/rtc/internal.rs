@@ -208,7 +208,7 @@ impl PeerForwardInternal {
                 break;
             }
 
-            let is_broadcast = buffer[..4] == buffer[4..7];
+            let is_broadcast = buffer[..4] == buffer[4..8];
             if is_broadcast {
                 debug!("[rtc] send broadcast message");
                 if let Err(err) = group_sender.send(buffer[..n + 4].to_vec()) {
@@ -236,7 +236,7 @@ impl PeerForwardInternal {
         mut user_receiver: broadcast::Receiver<Vec<u8>>,
     ) {
         while let Ok(msg) = user_receiver.recv().await {
-            if let Err(_err) = d.write(&msg[8..].to_vec().into()).await {
+            if let Err(_err) = d.write(&msg.into()).await {
                 // Maybe stream has been closed
                 // info!("write data channel err: {}", _err);
                 return;

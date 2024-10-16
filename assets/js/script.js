@@ -1,5 +1,6 @@
 //import { SfuPeerConnection } from "./webrtc-sfu.js";
 //import { SfuWebSocket } from "./ws-sfu.js";
+//import { SfuClient } from "./sfu-client.js";
 
 var peerConnection = new SfuPeerConnection();
 var websocket = new SfuWebSocket();
@@ -87,7 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 switch (action) {
                     case "send_rtc_message":
-                        peerConnection.sendData(json.sender_message);
+                        peerConnection.send(json.sender_message, json.to);
                         break;
                     case "stream/whip":
                         peerConnection.whip(json);

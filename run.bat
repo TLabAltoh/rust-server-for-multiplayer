@@ -1,4 +1,4 @@
 clear
 
-target\debug\webrtc-sfu.exe --config cnf\webrtc-sfu.toml
+target\debug\unity-rust-sfu.exe --config cnf\unity-rust-sfu.toml
 

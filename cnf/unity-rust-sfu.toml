@@ -14,21 +14,21 @@ urls = [
 
 # [[ice_servers]]
 # urls = [ "turn:turn.22333.fun", "turn:cn.22333.fun" ]
-# username = "webrtc-chat-sfu"
-# credential = "webrtc-chat-sfu"
+# username = "unity-rust-sfu"
+# credential = "unity-rust-sfu"
 # credential_type = "password"
 
 # WHIP/WHEP auth token
 # Headers["Authorization"] = "Bearer {token}"
 # [auth]
-# tokens = ["webrtc-chat-sfu"]
+# tokens = ["unity-rust-sfu"]
 
 # Not WHIP/WHEP standard
 # https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#basic
 # Headers["Authorization"] = "Basic {Base64.encode({username}:{password})}"
 # [[auth.accounts]]
-# username = "webrtc-chat-sfu"
-# password = "webrtc-chat-sfu"
+# username = "unity-rust-sfu"
+# password = "unity-rust-sfu"
 
 [log]
 # Env: `LOG_LEVEL`
