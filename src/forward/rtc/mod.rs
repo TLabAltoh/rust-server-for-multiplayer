@@ -11,7 +11,8 @@ use webrtc::peer_connection::RTCPeerConnection;
 
 use internal::PeerForwardInternal;
 use media::MediaInfo;
-use message::ForwardInfo;
+use message::{ForwardInfo, Layer};
+use webrtc::rtp_transceiver::rtp_codec::RTPCodecType;
 
 use crate::error::AppError;
 use crate::result::Result;
@@ -202,6 +203,31 @@ impl PeerForward {
             get_peer_id(&peer),
         );
         Ok((peer, sdp, session))
+    }
+
+    pub async fn layers(&self) -> Result<Vec<Layer>> {
+        if self.internal.publish_is_svc().await {
+            let mut layers = vec![];
+            for rid in self.internal.publish_svc_rids().await? {
+                layers.push(Layer {
+                    encoding_id: rid.to_owned(),
+                });
+            }
+            Ok(layers)
+        } else {
+            Err(AppError::throw("not layers"))
+        }
+    }
+
+    pub async fn select_layer(&self, session: String, layer: Option<Layer>) -> Result<()> {
+        let rid = if let Some(layer) = layer {
+            layer.encoding_id
+        } else {
+            self.internal.publish_svc_rids().await?[0].clone()
+        };
+        self.internal
+            .select_kind_rid(session, RTPCodecType::Video, rid)
+            .await
     }
 
     // This function has not used currently, but seems worth to keep retain

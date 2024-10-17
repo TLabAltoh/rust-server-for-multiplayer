@@ -1,6 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::Utc;
 use tokio::sync::broadcast;
 use tracing::debug;
@@ -10,10 +10,12 @@ use crate::forward::rtc::message::SessionInfo;
 use crate::forward::rtc::rtcp::RtcpMessage;
 
 use super::get_peer_id;
+use super::media::MediaInfo;
 
 pub(crate) struct PublishRTCPeerConnection {
     pub(crate) id: String,
     pub(crate) peer: Arc<RTCPeerConnection>,
+    pub(crate) media_info: MediaInfo,
     pub(crate) create_time: i64,
 }
 
@@ -25,10 +27,17 @@ impl PublishRTCPeerConnection {
     ) -> Result<Self> {
         let id = get_peer_id(&peer);
         let peer_weak = Arc::downgrade(&peer);
+        let media_info = MediaInfo::try_from(
+            peer.remote_description()
+                .await
+                .ok_or(anyhow!("not set remote_description"))?
+                .unmarshal()?,
+        )?;
         tokio::spawn(Self::peer_send_rtcp(path, id.clone(), peer_weak, rtcp_recv));
         Ok(Self {
             id,
             peer,
+            media_info,
             create_time: Utc::now().timestamp_millis(),
         })
     }

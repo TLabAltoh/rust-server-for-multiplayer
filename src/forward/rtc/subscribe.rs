@@ -10,15 +10,21 @@ use webrtc::rtp_transceiver::rtp_sender::RTCRtpSender;
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::TrackLocalWriter;
 
+use crate::error::AppError;
 use crate::forward::rtc::message::SessionInfo;
 use crate::forward::rtc::rtcp::RtcpMessage;
 use crate::forward::rtc::track::ForwardData;
+use crate::result::Result;
+use crate::{constant, new_broadcast_channel};
 
 use super::get_peer_id;
 use super::track::PublishTrackRemote;
 
+type SelectLayerBody = (RTPCodecType, String);
+
 struct SubscribeForwardChannel {
     publish_rtcp_sender: broadcast::Sender<(RtcpMessage, u32)>,
+    select_layer_recv: broadcast::Receiver<SelectLayerBody>,
     publish_track_change: broadcast::Receiver<()>,
 }
 
@@ -26,6 +32,7 @@ pub(crate) struct SubscribeRTCPeerConnection {
     pub(crate) id: String,
     pub(crate) peer: Arc<RTCPeerConnection>,
     pub(crate) create_time: i64,
+    select_layer_sender: broadcast::Sender<SelectLayerBody>,
 }
 
 impl SubscribeRTCPeerConnection {
@@ -39,6 +46,7 @@ impl SubscribeRTCPeerConnection {
         ),
         (video_sender, audio_sender): (Option<Arc<RTCRtpSender>>, Option<Arc<RTCRtpSender>>),
     ) -> Self {
+        let select_layer_sender = new_broadcast_channel!(1);
         let id = get_peer_id(&peer);
         let track_binding_publish_rid = Arc::new(RwLock::new(HashMap::new()));
         for (sender, kind) in [
@@ -65,6 +73,7 @@ impl SubscribeRTCPeerConnection {
                 publish_tracks.clone(),
                 SubscribeForwardChannel {
                     publish_rtcp_sender: publish_rtcp_sender.clone(),
+                    select_layer_recv: select_layer_sender.subscribe(),
                     publish_track_change: publish_track_change.subscribe(),
                 },
             ));
@@ -74,6 +83,7 @@ impl SubscribeRTCPeerConnection {
             id,
             peer,
             create_time: Utc::now().timestamp_millis(),
+            select_layer_sender,
         }
     }
 
@@ -82,6 +92,14 @@ impl SubscribeRTCPeerConnection {
             id: self.id.clone(),
             create_time: self.create_time,
             connect_state: self.peer.connection_state(),
+        }
+    }
+
+    pub(crate) fn select_kind_rid(&self, kind: RTPCodecType, rid: String) -> Result<()> {
+        if let Err(err) = self.select_layer_sender.send((kind, rid)) {
+            Err(AppError::throw(format!("select layer send err: {}", err)))
+        } else {
+            Ok(())
         }
     }
 
@@ -95,6 +113,7 @@ impl SubscribeRTCPeerConnection {
         mut forward_channel: SubscribeForwardChannel,
     ) {
         info!("[{}] [{}] {} up", stream, id, kind);
+        let mut pre_rid: Option<String> = None;
         // empty broadcast channel
         let (virtual_sender, _) = broadcast::channel::<ForwardData>(1);
         let mut recv = virtual_sender.subscribe();
@@ -115,13 +134,17 @@ impl SubscribeRTCPeerConnection {
                             recv = virtual_sender.subscribe();
                             let _ = sender.replace_track(None).await;
                             track = None;
-                            if current_rid.is_some() {
+                            pre_rid = None;
+                            if current_rid.is_some() && current_rid.cloned().unwrap() != constant::RID_DISABLE {
                                 track_binding_publish_rid.remove(&kind.clone().to_string());
                             };
                             continue;
                         }
                         if track.is_some(){
                             continue;
+                        }
+                        if current_rid.is_some() && current_rid.cloned().unwrap() == constant::RID_DISABLE {
+                           continue;
                         }
                         for publish_track in publish_tracks.iter() {
                               if publish_track.kind != kind {
@@ -164,6 +187,80 @@ impl SubscribeRTCPeerConnection {
                         }
                         Err(err) => {
                             debug!("[{}] [{}] {} rtp receiver err: {}", stream, id, kind,err);
+                        }
+                    }
+                }
+                select_layer_result = forward_channel.select_layer_recv.recv() => {
+                    match select_layer_result {
+                        Ok(select_layer_body) => {
+                            if select_layer_body.0 != kind {
+                                continue;
+                            };
+                             let select_rid = select_layer_body.1;
+                             let mut track_binding_publish_rid = track_binding_publish_rid.write().await;
+                             let publish_tracks =  publish_tracks.read().await;
+                             let current_rid = track_binding_publish_rid.get(&kind.to_string()).cloned();
+                             if current_rid == Some(select_rid.clone()){
+                                continue;
+                             }
+                            let new_rid = match &current_rid{
+                                None => {
+                                    select_rid.clone()
+                                }
+                                Some(current_rid) => {
+                                    if current_rid == constant::RID_DISABLE && select_rid == constant::RID_ENABLE{
+                                        track_binding_publish_rid.remove(&kind.clone().to_string());
+                                        match &pre_rid{
+                                            None => {
+                                                let next_rid = publish_tracks.iter().filter(|t|t.kind==kind).map(|t|t.rid.clone()).next();
+                                                if next_rid.is_none(){
+                                                    continue;
+                                                }
+                                                next_rid.unwrap()
+                                            }
+                                            Some(pre_rid) => {
+                                                pre_rid.clone()
+                                            }
+                                        }
+                                    }else{
+                                        select_rid.clone()
+                                    }
+                                }
+                            };
+                            if new_rid == constant::RID_DISABLE {
+                                if current_rid.is_some(){
+                                    recv = virtual_sender.subscribe();
+                                    let _ = sender.replace_track(None).await;
+                                    track = None;
+                                    pre_rid = Some(current_rid.unwrap());
+                                }
+                                track_binding_publish_rid.insert(kind.clone().to_string(), new_rid);
+                                continue;
+                            };
+                            for  publish_track in publish_tracks.iter() {
+                                if publish_track.kind == RTPCodecType::Video && (publish_track.rid == new_rid || new_rid == constant::RID_ENABLE) {
+                                      let new_track= Arc::new(
+                                        TrackLocalStaticRTP::new(publish_track.track.clone().codec().capability,"webrtc".to_string(),format!("{}-{}","webrtc",kind))
+                                    );
+                                    match sender.replace_track(Some(new_track.clone())).await {
+                                     Ok(_) => {
+                                        debug!("[{}] [{}] {} track replace ok", stream, id,kind);
+                                        recv = publish_track.subscribe();
+                                        track = Some(new_track);
+                                        let _ = forward_channel.publish_rtcp_sender.send((RtcpMessage::PictureLossIndication, publish_track.track.ssrc())).unwrap();
+                                        track_binding_publish_rid.insert(kind.clone().to_string(), new_rid.clone());
+                                        info!("[{}] [{}] {} select layer to {}", stream, id, kind,new_rid);
+                                    }
+                                     Err(e) => {
+                                        debug!("[{}] [{}] {} track replace err: {}", stream, id,kind, e);
+                                    }};
+                                    break;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            debug!("select_layer_recv err : {:?}",e);
+                            break ;
                         }
                     }
                 }

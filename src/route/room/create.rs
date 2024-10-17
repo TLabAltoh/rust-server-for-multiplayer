@@ -3,7 +3,6 @@ use axum::extract::{Path, State};
 use axum::response::Response;
 use axum::routing::post;
 use axum::Router;
-use base64::prelude::*;
 use http::StatusCode;
 use log::debug;
 use serde::Deserialize;
@@ -13,7 +12,7 @@ use std::collections::HashMap;
 use crate::http;
 use crate::result::Result;
 use crate::room::Room;
-use crate::route::AppState;
+use crate::route::*;
 use crate::ROOMS;
 
 pub fn route() -> Router<AppState> {
@@ -37,15 +36,10 @@ async fn create_room(
 ) -> Result<Response> {
     debug!("HTTP GET /room/create");
 
-    if !params.contains_key("json_base64") {
-        return Ok(http::create_response(
-            Body::from("Missing JSON".to_string()),
-            StatusCode::NOT_ACCEPTABLE,
-        ));
-    }
-
-    let json_obj = BASE64_STANDARD.decode(params.get("json_base64").unwrap())?;
-    let json: JSON = serde_json::from_slice(&json_obj)?;
+    let json: JSON = match parse_base64_into_json(&params) {
+        Ok(json) => json,
+        Err(err_response) => return Ok(err_response),
+    };
 
     let mut rooms = ROOMS.lock().await;
 

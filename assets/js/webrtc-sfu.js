@@ -203,6 +203,10 @@ class SfuPeerConnection extends SfuClient {
     console.log('Send channel state is: ' + readyState);
 
     if (readyState == "open") {
+      if (this.sock != null) {
+        this.sock.close();
+      }
+
       clearInterval(this.localCandidateTask);
       clearInterval(this.remoteCandidateTask);
     }

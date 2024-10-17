@@ -30,9 +30,11 @@ use crate::route::AppState;
 
 mod auth;
 mod config;
+mod constant;
 mod error;
 mod forward;
 mod http;
+mod r#macro;
 mod metrics;
 mod result;
 mod room;

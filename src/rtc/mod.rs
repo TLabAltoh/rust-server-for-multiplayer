@@ -11,7 +11,7 @@ use webrtc::peer_connection::RTCPeerConnection;
 
 use crate::config::Config;
 use crate::error::AppError;
-use crate::forward::rtc::message::ForwardInfo;
+use crate::forward::rtc::message::{ForwardInfo, Layer};
 use crate::forward::rtc::PeerForward;
 use crate::result::Result;
 
@@ -153,6 +153,33 @@ impl Forwarder {
         return Ok(stream_map.contains_key(&stream));
     }
 
+    pub async fn layers(&self, stream: String) -> Result<Vec<Layer>> {
+        let stream_map = self.stream_map.read().await;
+        let forward = stream_map.get(&stream).cloned();
+        drop(stream_map);
+        if let Some(forward) = forward {
+            forward.layers().await
+        } else {
+            Err(AppError::stream_not_found("stream not exists"))
+        }
+    }
+
+    pub async fn select_layer(
+        &self,
+        stream: String,
+        session: String,
+        layer: Option<Layer>,
+    ) -> Result<()> {
+        let stream_map = self.stream_map.read().await;
+        let forward = stream_map.get(&stream).cloned();
+        drop(stream_map);
+        if let Some(forward) = forward {
+            forward.select_layer(session, layer).await
+        } else {
+            Err(AppError::stream_not_found("stream not exists"))
+        }
+    }
+
     pub async fn virtual_publish(
         &self,
         stream: String,
@@ -210,7 +237,7 @@ impl Forwarder {
         if let Some(forward) = forward {
             Ok(forward.publish_is_ok().await)
         } else {
-            Err(AppError::stream_not_fount("stream not exists"))
+            Err(AppError::stream_not_found("stream not exists"))
         }
     }
 
@@ -228,7 +255,7 @@ impl Forwarder {
             let (peer, sdp, session) = forward.add_subscribe(id, offer, on_ice_candidate).await?;
             Ok((peer, sdp, session))
         } else {
-            Err(AppError::stream_not_fount("stream not exists"))
+            Err(AppError::stream_not_found("stream not exists"))
         }
     }
 

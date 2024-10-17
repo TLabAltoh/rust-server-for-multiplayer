@@ -414,6 +414,35 @@ impl PeerForwardInternal {
         Ok(peer)
     }
 
+    pub async fn publish_is_svc(&self) -> bool {
+        let publish = self.publish.read().await;
+        if publish.is_none() {
+            return false;
+        }
+        publish.as_ref().unwrap().media_info.video_transceiver.2
+    }
+
+    pub async fn publish_svc_rids(&self) -> Result<Vec<String>> {
+        let publish_tracks = self.publish_tracks.read().await;
+        let rids = publish_tracks
+            .iter()
+            .filter(|t| t.kind == RTPCodecType::Video)
+            .map(|t| t.rid.clone())
+            .collect::<Vec<_>>();
+        Ok(rids)
+    }
+
+    pub async fn select_kind_rid(&self, id: String, kind: RTPCodecType, rid: String) -> Result<()> {
+        let subscribe_group = self.subscribe_group.read().await;
+        for subscribe in subscribe_group.iter() {
+            if subscribe.id == id {
+                subscribe.select_kind_rid(kind, rid)?;
+                break;
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) async fn publish_track_up(
         &self,
         peer: Arc<RTCPeerConnection>,

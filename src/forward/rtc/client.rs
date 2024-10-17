@@ -48,7 +48,7 @@ impl Client {
             }
         }
 
-        Err(AppError::stream_not_fount(stream.clone()))
+        Err(AppError::stream_not_found(stream.clone()))
     }
 
     pub async fn get_streams(&self) -> Vec<String> {

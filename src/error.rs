@@ -10,7 +10,7 @@ pub enum AppError {
 }
 
 impl AppError {
-    pub fn stream_not_fount<T>(t: T) -> Self
+    pub fn stream_not_found<T>(t: T) -> Self
     where
         T: ToString,
     {

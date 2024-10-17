@@ -12,6 +12,7 @@ use crate::rtc::{Forwarder, ForwarderConfig};
 
 use tokio::sync::RwLock;
 
+#[derive(Clone)]
 pub struct Room {
     id: i32,
     name: String,
