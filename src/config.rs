@@ -21,8 +21,6 @@ pub struct Config {
     #[serde(default)]
     pub log: Log,
     #[serde(default)]
-    pub node_addr: Option<SocketAddr>,
-    #[serde(default)]
     pub stream_info: StreamInfo,
     #[serde(default)]
     pub webhooks: Vec<String>,

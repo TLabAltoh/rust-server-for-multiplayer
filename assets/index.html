@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -8,7 +9,6 @@
 	<!-- <link rel="stylesheet" type="text/css" href="/assets/styles.css" /> -->
 
 	<!-- icon -->
-	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
 	<link rel="apple-touch-icon" href="https://imgur.com/qbtnxAZ.png" sizes="180x180">
 	<link rel="icon" type="image/png" href="https://imgur.com/gmfx8ZI.png" sizes="192x192">
 	<!-- icon -->
@@ -21,22 +21,23 @@
 </head>
 
 <body>
-	<h1>WebRTC-Chat-SFU</h1>
+	<h1>Unity-Rust-SFU</h1>
 
 	<h2>Hello There</h2>
-	<h3>WebRTC-Chat-SFU is a sample project for creating a chat
-		application with <a href="https://webrtc.rs/">webrtc-rs</a>.
-		Communication is based on the WebRTC SFU protocol, so it's
-		easy to bind video and audio streams to an application, and
-		low-latency media is delivered to room clients.
+	<h3>
+		This is an SFU server for relaying
+		<a href="https://webrtc.org/?hl=en">WebRTC</a>
+		and
+		<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API">WebSocket</a>
+		packets. Intended for use in a realtime multiplayer game.
+		This repository's webrtc implementation is mostly based on
+		<a href="https://github.com/binbat">binbat</a>'s
+		<a href="https://github.com/binbat/live777">live777</a> and
+		<a href="https://github.com/webrtc-rs/webrtc">webrtc-rs</a>.
 	</h3>
 	<hr>
 
-	<h2>Entrance</h2>
-	<h3>
-		What do you want to do? You can create a room or join the
-		room and participate in chat.
-	</h3>
+	<h2>Debug Tool</h2>
 
 	<div class="wrap">
 		<div class="scroll">
@@ -192,7 +193,7 @@
 				</details>
 			</details>
 
-			<details>
+			<details open="true">
 				<summary>WHIP</summary>
 				<details open="true">
 					<summary>Publish</summary>
@@ -227,21 +228,23 @@
 
 				<details open="true">
 					<summary>MediaTrack</summary>
-					<button class="button_submit" onclick="startRecording()">Start Recording</button>
-					<button class="button_submit" onclick="endRecording()">End Recording</button>
-					<div>
-						<audio controls id="audio_source" src="media/sample-audio.mp3"></audio>
-					</div>
-					<div><canvas id="whip_audio_canvas"></canvas></div>
-					<div id="container">
-						<video crossorigin="anonymous" id="videoL" width="256" playsinline controls loop muted>
-							<source
-								src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-								type="video/mp4" />
-							<p>This browser does not support the video element.</p>
-						</video>
-						<video id="videoR" width="256" playsinline autoplay muted></video>
-					</div>
+					<details open="true">
+						<summary>Audio</summary>
+						<div>
+							<audio controls id="audio_source" src="media/sample-audio.mp3"></audio>
+						</div>
+						<div><canvas id="whip_audio_canvas"></canvas></div>
+					</details>
+					<details>
+						<summary>Video</summary>
+						<div id="container">
+							<video id="videoL" height="128" playsinline controls loop muted>
+								<source src="media/sample-video.mp4" type="video/mp4" />
+								<p>This browser does not support the video element.</p>
+							</video>
+							<video id="videoR" height="128" playsinline autoplay muted></video>
+						</div>
+					</details>
 				</details>
 			</details>
 

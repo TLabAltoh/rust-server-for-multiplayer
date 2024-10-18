@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::vec;
@@ -31,8 +30,6 @@ pub struct ForwarderConfig {
     pub ice_servers: Vec<RTCIceServer>,
     pub reforward_close_sub: bool,
     pub publish_leave_timeout: u64,
-    pub addr: SocketAddr,
-    pub webhooks: Vec<String>,
 }
 
 impl ForwarderConfig {
@@ -47,8 +44,6 @@ impl ForwarderConfig {
             ice_servers,
             reforward_close_sub: cfg.stream_info.reforward_close_sub,
             publish_leave_timeout: cfg.stream_info.publish_leave_timeout.0,
-            addr: cfg.node_addr.unwrap(),
-            webhooks: cfg.webhooks.clone(),
         }
     }
 }

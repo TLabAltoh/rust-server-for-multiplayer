@@ -10,12 +10,9 @@ use axum::Router;
 use clap::{command, Parser};
 
 use http_body_util::BodyExt;
-use local_ip_address::local_ip;
 use room::Room;
 use std::collections::HashMap;
 use std::future::IntoFuture;
-use std::net::SocketAddr;
-use std::str::FromStr;
 use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
@@ -102,7 +99,7 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    let mut cfg = Config::parse(args.config);
+    let cfg = Config::parse(args.config);
     utils::set_log(format!("unity_rust_sfu={},webrtc=error", cfg.log.level));
 
     warn!("set log level : {}", cfg.log.level);
@@ -112,16 +109,7 @@ async fn main() -> Result<()> {
         .unwrap();
     let addr = listener.local_addr().unwrap();
     info!("Server listening on {}", addr);
-    debug!("Debug tool shortcut http://localhost:7777");
-    if cfg.node_addr.is_none() {
-        let port = addr.port();
-        cfg.node_addr =
-            Some(SocketAddr::from_str(&format!("{}:{}", local_ip().unwrap(), port)).unwrap());
-        warn!(
-            "config node_addr not set, auto detect local_ip_port : http://{:?}",
-            cfg.node_addr.unwrap()
-        );
-    }
+    debug!("Debug tool shortcut http://localhost:{}", addr.port());
     let app_state = AppState {
         config: cfg.clone(),
     };

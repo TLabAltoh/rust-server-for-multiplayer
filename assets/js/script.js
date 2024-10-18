@@ -195,14 +195,17 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 window.onload = function () {
-    document.audioContext = new AudioContext();
-    document.localMediaStream = null;
-    document.localScriptProcessor = null;
+    document.mediaStream = null;
+    document.scriptProcessor = null;
     document.bufferSize = 1024;
     document.audioData = [];
     document.recordingFlg = false;
 
     document.audioElement = document.getElementById("audio_source");
+
+    document.audioElement.addEventListener("play", startRecording);
+    document.audioElement.addEventListener("stop", endRecording);
+
     document.canvas = document.getElementById("whip_audio_canvas");
     document.canvasContext = document.canvas.getContext("2d");
 
@@ -210,14 +213,19 @@ window.onload = function () {
 }
 
 function onAudioProcess(e) {
-    if (!recordingFlg) return;
+    if (!document.recordingFlg) return;
 
     var input = e.inputBuffer.getChannelData(0);
+    var output = e.outputBuffer.getChannelData(0);
+
+    var power = document.isFirefox ? 1 : 0;
+
     var bufferData = new Float32Array(document.bufferSize);
-    for (var i = 0; i < bufferSize; i++) {
+    for (var i = 0; i < document.bufferSize; i++) {
         bufferData[i] = input[i];
+        output[i] = input[i] * power;
     }
-    audioData.push(bufferData);
+    document.audioData.push(bufferData);
 
     analyseVoice();
 };
@@ -229,10 +237,12 @@ function analyseVoice() {
     document.canvasContext.clearRect(0, 0, document.canvas.width, document.canvas.height);
 
     document.canvasContext.beginPath();
+    document.canvasContext.strokeStyle = "rgb(0 255 0 / 50%)";
 
     for (var i = 0, len = spectrums.length; i < len; i++) {
         var x = (i / len) * document.canvas.width;
         var y = (1 - (spectrums[i] / 255)) * document.canvas.height;
+
         if (i === 0) {
             document.canvasContext.moveTo(x, y);
         } else {
@@ -240,52 +250,58 @@ function analyseVoice() {
         }
         var f = Math.floor(i * fsDivN);
 
-        if ((f % 500) === 0) {
+        if ((f % 1000) === 0) {
             var text = (f < 1000) ? (f + ' Hz') : ((f / 1000) + ' kHz');
-            document.canvasContext.fillRect(x, 0, 1, document.canvas.height);
             document.canvasContext.fillText(text, x, document.canvas.height);
         }
     }
 
     document.canvasContext.stroke();
 
-    var textYs = ['1.00', '0.50', '0.00'];
-    for (var i = 0, len = textYs.length; i < len; i++) {
-        var text = textYs[i];
-        var gy = (1 - parseFloat(text)) * document.canvas.height;
+    var baseYs = [1.00, 0.50, 0.00];
+    for (var i = 0, len = baseYs.length; i < len; i++) {
+        var base = baseYs[i];
+        var gy = (1 - base) * document.canvas.height;
         document.canvasContext.fillRect(0, gy, document.canvas.width, 1);
-        document.canvasContext.fillText(text, 0, gy);
     }
 }
 
 function startRecording() {
-    recordingFlg = true;
+    document.recordingFlg = true;
 
-    let stream;
+    document.audioContext = new AudioContext();
+    document.isFirefox = false;
+
     if (document.audioElement.captureStream) {
-        stream = document.audioElement.captureStream();
+        document.mediaStream = document.audioElement.captureStream();
     } else if (document.audioElement.mozCaptureStream) {
-        stream = videoL.mozCaptureStream();
+        document.mediaStream = document.audioElement.mozCaptureStream();
+        document.isFirefox = true;
     } else {
         console.error('Stream capture is not supported');
-        stream = null;
+        document.mediaStream = null;
     }
 
-    localMediaStream = stream;
-    var scriptProcessor = document.audioContext.createScriptProcessor(document.bufferSize, 1, 1);
-    localScriptProcessor = scriptProcessor;
-    var mediastreamsource = document.audioContext.createMediaStreamSource(stream);
-    mediastreamsource.connect(scriptProcessor);
-    scriptProcessor.onaudioprocess = onAudioProcess;
-    scriptProcessor.connect(document.audioContext.destination);
+    document.scriptProcessor = document.audioContext.createScriptProcessor(document.bufferSize, 1, 1);
+    var mediastreamsource = document.audioContext.createMediaStreamSource(document.mediaStream);
+    mediastreamsource.connect(document.scriptProcessor);
+    document.scriptProcessor.onaudioprocess = onAudioProcess;
+    document.scriptProcessor.connect(document.audioContext.destination);
 
-    audioAnalyser = document.audioContext.createAnalyser();
-    audioAnalyser.fftSize = 2048;
-    frequencyData = new Uint8Array(document.audioAnalyser.frequencyBinCount);
-    timeDomainData = new Uint8Array(document.audioAnalyser.frequencyBinCount);
+    document.audioAnalyser = document.audioContext.createAnalyser();
+    document.audioAnalyser.fftSize = 2048;
     mediastreamsource.connect(document.audioAnalyser);
 };
 
 function endRecording() {
-    recordingFlg = false;
+    document.recordingFlg = false;
+
+    const stream = document.mediaStream;
+    const tracks = stream.getTracks();
+
+    tracks.forEach((track) => {
+        track.stop();
+    });
+
+    document.mediaStream = null;
 };
