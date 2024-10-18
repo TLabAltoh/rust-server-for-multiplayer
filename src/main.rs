@@ -112,6 +112,7 @@ async fn main() -> Result<()> {
         .unwrap();
     let addr = listener.local_addr().unwrap();
     info!("Server listening on {}", addr);
+    debug!("Debug tool shortcut http://localhost:7777");
     if cfg.node_addr.is_none() {
         let port = addr.port();
         cfg.node_addr =

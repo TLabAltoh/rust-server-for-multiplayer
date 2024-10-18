@@ -227,14 +227,20 @@
 
 				<details open="true">
 					<summary>MediaTrack</summary>
+					<button class="button_submit" onclick="startRecording()">Start Recording</button>
+					<button class="button_submit" onclick="endRecording()">End Recording</button>
+					<div>
+						<audio controls id="audio_source" src="media/sample-audio.mp3"></audio>
+					</div>
+					<div><canvas id="whip_audio_canvas"></canvas></div>
 					<div id="container">
-						<video crossorigin="anonymous" id="leftVideo" width="256" playsinline controls loop muted>
+						<video crossorigin="anonymous" id="videoL" width="256" playsinline controls loop muted>
 							<source
 								src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
 								type="video/mp4" />
 							<p>This browser does not support the video element.</p>
 						</video>
-						<video id="rightVideo" width="256" playsinline autoplay muted></video>
+						<video id="videoR" width="256" playsinline autoplay muted></video>
 					</div>
 				</details>
 			</details>
@@ -269,6 +275,11 @@
 						</table>
 						<input type="submit" class="button_submit" value="send message">
 					</form>
+				</details>
+
+				<details open="true">
+					<summary>MediaTrack</summary>
+					<div><canvas id="whep_audio_canvas"></canvas></div>
 				</details>
 			</details>
 
