@@ -116,7 +116,14 @@ async fn whip(
                 session: session,
                 candidate: String::new(),
             };
-            let _ = socket.send(ws::Message::Text(serde_json::to_string(&answer).unwrap()));
+
+            if socket
+                .send(ws::Message::Text(serde_json::to_string(&answer).unwrap()))
+                .await
+                .is_err()
+            {
+                return;
+            };
 
             let (mut sender, mut receiver) = socket.split();
 

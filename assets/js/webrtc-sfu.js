@@ -6,16 +6,14 @@ class SfuPeerConnection extends SfuClient {
   }
 
   buffer_to_string(buf) {
-    return String.fromCharCode.apply("", new Uint8Array(buf))
+    return String.fromCharCode.apply("", new Uint8Array(buf));
   }
 
-  whip(json) {
+  whip(json, stream) {
     this.json = json;
     this.action = "stream/whip";
 
     const servers = {
-      offerToReceiveAudio: 1,
-      offerToReceiveVideo: 1,
       iceServers: [{
         urls: "stun:stun.l.google.com:19302"
       }]
@@ -37,6 +35,10 @@ class SfuPeerConnection extends SfuClient {
 
     this.localCandidates = [];
     this.remoteCandidates = [];
+
+    if (stream !== null) {
+      stream.getTracks().forEach(track => this.peerConnection.addTrack(track, stream));
+    }
 
     this.peerConnection.createOffer().then(
       this.onCreateOffer.bind(this),
@@ -44,13 +46,11 @@ class SfuPeerConnection extends SfuClient {
     );
   }
 
-  whep(json) {
+  whep(json, ontrack) {
     this.json = json;
     this.action = "stream/whep";
 
     const servers = {
-      offerToReceiveAudio: 1,
-      offerToReceiveVideo: 1,
       iceServers: [{
         urls: "stun:stun.l.google.com:19302"
       }]
@@ -73,7 +73,9 @@ class SfuPeerConnection extends SfuClient {
     this.localCandidates = [];
     this.remoteCandidates = [];
 
-    this.peerConnection.createOffer().then(
+    this.peerConnection.ontrack = ontrack;
+
+    this.peerConnection.createOffer(ontrack !== null ? { offerToReceiveAudio: 1 } : null).then(
       this.onCreateOffer.bind(this),
       this.onCreateSessionDescriptionError.bind(this)
     );
@@ -81,6 +83,13 @@ class SfuPeerConnection extends SfuClient {
 
   onCreateSessionDescriptionError(error) {
     console.log('Failed to create session description: ' + error.toString());
+  }
+
+  gotRemoteStream(event) {
+    if (rightVideo.srcObject !== event.streams[0]) {
+      rightVideo.srcObject = event.streams[0];
+      console.log('pc2 received remote stream', event);
+    }
   }
 
   send(message, to) {
@@ -159,7 +168,7 @@ class SfuPeerConnection extends SfuClient {
     this.localCandidateTask = setInterval(() => {
       if (this.sock.readyState == WebSocket.OPEN) {
         this.localCandidates.forEach((candidate) => {
-          this.sock.send(JSON.stringify({ "is_candidate": false, "sdp": "", "candidate": candidate }));
+          this.sock.send(JSON.stringify({ "is_candidate": false, "session": "", "sdp": "", "candidate": candidate }));
         });
         this.localCandidates = [];
       }

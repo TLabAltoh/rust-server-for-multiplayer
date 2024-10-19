@@ -231,7 +231,7 @@
 					<details open="true">
 						<summary>Audio</summary>
 						<div>
-							<audio controls id="audio_source" src="media/sample-audio.mp3"></audio>
+							<audio id="audio_send" src="media/sample-audio.mp3" controls loop></audio>
 						</div>
 						<div><canvas id="whip_audio_canvas"></canvas></div>
 					</details>
@@ -282,6 +282,9 @@
 
 				<details open="true">
 					<summary>MediaTrack</summary>
+					<div>
+						<audio id="audio_recv" autoplay controls></audio>
+					</div>
 					<div><canvas id="whep_audio_canvas"></canvas></div>
 				</details>
 			</details>

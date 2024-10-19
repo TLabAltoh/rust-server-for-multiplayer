@@ -38,7 +38,7 @@ function getUrlQueries() {
 
 function createClient() {
     const room_id = document.getElementById("room/join").getElementsByName("room_id")[0].getAttribute("value");
-    window.open(document.URL + "?room_id=" + String(room_id), null);
+    window.open(document.URL + (document.duplicated ? "" : "?room_id=" + String(room_id)), '_blank');
 }
 
 async function post(action) {
@@ -59,6 +59,14 @@ async function post(action) {
 const forms = document.getElementsByTagName("form");
 
 const form_action = ["room", "room/join", "room/exit", "room/create", "room/delete", "stream/whip", "stream/whep", "stream/reforward", "stream/infos", "send_rtc_message", "ws/connect", "send_ws_message"];
+
+function onTrack(event) {
+    var audioReceive = document.getElementById("audio_recv");
+    if (audioReceive.srcObject !== event.streams[0]) {
+        audioReceive.srcObject = event.streams[0];
+        console.log('received remote stream', event);
+    }
+}
 
 window.addEventListener('DOMContentLoaded', () => {
     for (var i = 0; i < forms.length; i++) {
@@ -91,10 +99,10 @@ window.addEventListener('DOMContentLoaded', () => {
                         peerConnection.send(json.sender_message, json.to);
                         break;
                     case "stream/whip":
-                        peerConnection.whip(json);
+                        peerConnection.whip(json, document.mediaStream);
                         break;
                     case "stream/whep":
-                        peerConnection.whep(json);
+                        peerConnection.whep(json, onTrack.bind(this));
                         break;
                     case "send_ws_message":
                         websocket.send(json.sender_message, json.to);
@@ -105,9 +113,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     default:
                         const jsonStr = JSON.stringify(json);
                         const jsonBase64 = btoa(jsonStr);
-
-                        // console.log("jsonStr: " + jsonStr);
-                        // console.log("jsonBase64: " + jsonBase64);
 
                         try {
                             var response = window.fetch(action + "/" + jsonBase64 + "/", {
@@ -185,32 +190,36 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     var queries = getUrlQueries();
+    document.duplicated = false;
     if (queries["room_id"]) {
+        document.duplicated = true;
         var room_id = Number(queries["room_id"]);
 
         ["room", "room/join", "room/exit", "room/delete", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
             document.getElementById(elem_id).getElementsByName("room_id")[0].setAttribute("value", room_id);
         });
     }
-});
 
-window.onload = function () {
+    document.recordingFlg = false;
     document.mediaStream = null;
     document.scriptProcessor = null;
-    document.bufferSize = 1024;
-    document.audioData = [];
-    document.recordingFlg = false;
+    document.audioAnalyser = null;
 
-    document.audioElement = document.getElementById("audio_source");
+    var audioSend = document.getElementById("audio_send");
+    audioSend.addEventListener("play", () => {
+        startRecording(true);
+    });
+    audioSend.addEventListener("stop", endRecording);
 
-    document.audioElement.addEventListener("play", startRecording);
-    document.audioElement.addEventListener("stop", endRecording);
+    var audioRecv = document.getElementById("audio_recv");
+    audioRecv.addEventListener("play", () => {
+        startRecording(false);
+    });
+    audioRecv.addEventListener("stop", endRecording);
 
     document.canvas = document.getElementById("whip_audio_canvas");
     document.canvasContext = document.canvas.getContext("2d");
-
-    document.audioAnalyser = null;
-}
+});
 
 function onAudioProcess(e) {
     if (!document.recordingFlg) return;
@@ -218,12 +227,9 @@ function onAudioProcess(e) {
     var input = e.inputBuffer.getChannelData(0);
     var output = e.outputBuffer.getChannelData(0);
 
-    var power = document.isFirefox ? 1 : 0;
-
     var bufferData = new Float32Array(document.bufferSize);
     for (var i = 0; i < document.bufferSize; i++) {
         bufferData[i] = input[i];
-        output[i] = input[i] * power;
     }
     document.audioData.push(bufferData);
 
@@ -266,8 +272,27 @@ function analyseVoice() {
     }
 }
 
-function startRecording() {
+function startRecording(isWhip) {
     document.recordingFlg = true;
+
+    document.bufferSize = 1024;
+    document.audioData = [];
+
+    document.isWhip = isWhip;
+    var audioElementId;
+    var canvasElementId;
+    if (isWhip) {
+        audioElementId = "audio_send";
+        canvasElementId = "whip_audio_canvas";
+    } else {
+        audioElementId = "audio_recv";
+        canvasElementId = "whep_audio_canvas";
+    }
+
+    document.audioElement = document.getElementById(audioElementId);
+
+    document.canvas = document.getElementById(canvasElementId);
+    document.canvasContext = document.canvas.getContext("2d");
 
     document.audioContext = new AudioContext();
     document.isFirefox = false;
@@ -283,14 +308,14 @@ function startRecording() {
     }
 
     document.scriptProcessor = document.audioContext.createScriptProcessor(document.bufferSize, 1, 1);
-    var mediastreamsource = document.audioContext.createMediaStreamSource(document.mediaStream);
-    mediastreamsource.connect(document.scriptProcessor);
+    var mediaStreamSource = isWhip ? new MediaElementAudioSourceNode(document.audioContext, { mediaElement: document.audioElement }) : document.audioContext.createMediaStreamSource(document.mediaStream);
+    mediaStreamSource.connect(document.scriptProcessor);
     document.scriptProcessor.onaudioprocess = onAudioProcess;
     document.scriptProcessor.connect(document.audioContext.destination);
 
     document.audioAnalyser = document.audioContext.createAnalyser();
+    mediaStreamSource.connect(document.audioAnalyser);
     document.audioAnalyser.fftSize = 2048;
-    mediastreamsource.connect(document.audioAnalyser);
 };
 
 function endRecording() {
