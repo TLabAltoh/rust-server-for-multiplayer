@@ -360,7 +360,7 @@ impl PeerForwardInternal {
         &self,
         media_info: MediaInfo,
     ) -> Result<Arc<RTCPeerConnection>> {
-        if media_info.video_transceiver.0 > 1 && media_info.audio_transceiver.0 > 1 {
+        if media_info.video_transceiver.0 > 1 || media_info.audio_transceiver.0 > 1 {
             return Err(AppError::throw("sendonly is more than 1"));
         }
         let mut m = MediaEngine::default();
@@ -492,8 +492,8 @@ impl PeerForwardInternal {
         if !self.publish_is_some().await {
             return Err(AppError::throw("publish is none"));
         }
-        if media_info.video_transceiver.1 > 1 && media_info.audio_transceiver.1 > 1 {
-            return Err(AppError::throw("sendonly is more than 1"));
+        if media_info.video_transceiver.1 > 1 || media_info.audio_transceiver.1 > 1 {
+            return Err(AppError::throw("recvonly is more than 1"));
         }
         let mut m = MediaEngine::default();
         m.register_default_codecs()?;
