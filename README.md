@@ -6,3 +6,25 @@ This is an SFU server for relaying [WebRTC](https://webrtc.org/?hl=en) and [WebS
 
 > [!WARNING]  
 > I am not a member or contributor of [original source](https://github.com/binbat/live777). Please note that my modification may have dropped original source's critical features. 
+
+## Get Started
+
+### Run
+
+```bat
+cd REPOSITORY_ROOT
+run.bat
+```
+
+## Debug Tool
+This repository contains a browser-based debugging tool. Run the command below to open it.
+
+### Chrome
+```bat
+start chrome http://localhost:7777 --auto-open-devtools-for-tabs
+```
+
+### Firefox
+```bat
+start firefox http://localhost:7777 -devtools
+```
