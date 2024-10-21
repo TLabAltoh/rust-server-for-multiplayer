@@ -17,6 +17,7 @@
 	<script src="js/webrtc-sfu.js"></script>
 	<script src="js/ws-sfu.js"></script>
 	<script src="js/script.js"></script>
+	<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 	<title>WebRTC-Chat-SFU</title>
 </head>
 
@@ -80,8 +81,8 @@
 							</tr>
 						</table>
 					</form>
-					<input type="submit" form="room" class="button_submit" value="show room info">
-					<input type="button" class="button_submit" onclick="post('/room')" , value="enum rooms">
+					<input type="submit" form="room" value="show room info">
+					<input type="button" onclick="post('/room')" , value="enum rooms">
 				</details>
 
 				<details open="true">
@@ -109,7 +110,7 @@
 							</tr>
 						</table>
 
-						<input type="submit" class="button_submit" value="join room">
+						<input type="submit" value="join room">
 					</form>
 				</details>
 
@@ -119,7 +120,7 @@
 						<table>
 							<div id="auth_container"></div>
 						</table>
-						<input type="submit" class="button_submit" value="exit room">
+						<input type="submit" value="exit room">
 					</form>
 				</details>
 
@@ -169,8 +170,8 @@
 							</tr>
 						</table>
 					</form>
-					<input type="submit" form="room/create" class="button_submit" value="create room">
-					<input type="button" class="button_submit" onclick="createClient();" value="create client">
+					<input type="submit" form="room/create" value="create room">
+					<input type="button" onclick="createClient();" value="create client">
 				</details>
 
 				<details open="true">
@@ -187,8 +188,7 @@
 								<td><input type="text" name="master_key" value="password"><br></td>
 							</tr>
 						</table>
-
-						<input type="submit" class="button_submit" value="delete room">
+						<input type="submit" value="delete room">
 					</form>
 				</details>
 			</details>
@@ -204,7 +204,7 @@
 								<td><input type="text" name="stream" value="default"><br></td>
 							</tr>
 						</table>
-						<input type="submit" class="button_submit" value="publish">
+						<input type="submit" value="publish">
 					</form>
 				</details>
 
@@ -222,7 +222,7 @@
 							</tr>
 						</table>
 
-						<input type="submit" class="button_submit" value="send message">
+						<input type="submit" value="send message">
 					</form>
 				</details>
 
@@ -235,16 +235,33 @@
 						</div>
 						<div><canvas id="whip_audio_canvas"></canvas></div>
 					</details>
-					<details>
+					<details open="true">
 						<summary>Video</summary>
-						<div id="container">
-							<video id="videoL" height="128" playsinline controls loop muted>
+						<div>
+							<video id="video" height="128" playsinline controls loop>
 								<source src="media/sample-video.mp4" type="video/mp4" />
-								<p>This browser does not support the video element.</p>
 							</video>
-							<video id="videoR" height="128" playsinline autoplay muted></video>
 						</div>
 					</details>
+					<div>
+						<button onclick="(function(){peerConnection.pause();})()">Pause</button>
+						<button onclick="(function(){peerConnection.resume();})()">Resume</button>
+
+						<select onchange="(function() {
+							const selector = document.getElementById('bandwidth');
+							const bandwidth = selector.options[selector.selectedIndex].value;
+							peerConnection.setBandwidth(bandwidth);
+						})()" id="bandwidth">
+							<option value="unlimited" selected>unlimited</option>
+							<option value="2000">2000</option>
+							<option value="1000">1000</option>
+							<option value="500">500</option>
+							<option value="250">250</option>
+							<option value="125">125</option>
+							<option value="75">75</option>
+						</select>
+						kbps
+					</div>
 				</details>
 			</details>
 
@@ -259,7 +276,7 @@
 								<td><input type="text" name="stream" value="default"><br></td>
 							</tr>
 						</table>
-						<input type="submit" class="button_submit" value="subscribe">
+						<input type="submit" value="subscribe">
 					</form>
 				</details>
 
@@ -276,16 +293,15 @@
 								<td><input type="text" name="sender_message"><br></td>
 							</tr>
 						</table>
-						<input type="submit" class="button_submit" value="send message">
+						<input type="submit" value="send message">
 					</form>
 				</details>
 
 				<details open="true">
 					<summary>MediaTrack</summary>
-					<div>
-						<audio id="audio_recv" autoplay controls></audio>
-					</div>
+					<div><audio id="audio_recv" autoplay controls></audio></div>
 					<div><canvas id="whep_audio_canvas"></canvas></div>
+					<div><video id="video_recv" height="128" autoplay controls></video></div>
 				</details>
 			</details>
 
@@ -300,7 +316,7 @@
 								<td><input type="text" name="stream" value="default"><br></td>
 							</tr>
 						</table>
-						<input type="submit" class="button_submit" value="join group">
+						<input type="submit" value="join group">
 					</form>
 				</details>
 
@@ -317,7 +333,7 @@
 								<td><input type="text" name="sender_message"><br></td>
 							</tr>
 						</table>
-						<input type="submit" class="button_submit" value="send message">
+						<input type="submit" value="send message">
 					</form>
 				</details>
 			</details>

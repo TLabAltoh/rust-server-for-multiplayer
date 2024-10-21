@@ -9,13 +9,43 @@
   height: 100%;
 }
 
+select {
+  border-radius: 7px;
+  padding: 2px 5px;
+  border: double 1px #00000088;
+}
+
 input {
   border-radius: 7px;
   padding: 2px 5px;
   border: double 1px #00000088;
 }
 
-.button_submit {
+input[type="submit"] {
+  background-color: #fff;
+  border: double 5px #3cb371;
+  color: #3cb371;
+  text-decoration: none;
+}
+
+input[type="submit"]:hover {
+  color: #3cb371;
+  background-color: #f0fff0;
+}
+
+input[type="button"] {
+  background-color: #fff;
+  border: double 5px #3cb371;
+  color: #3cb371;
+  text-decoration: none;
+}
+
+input[type="button"]:hover {
+  color: #3cb371;
+  background-color: #f0fff0;
+}
+
+button {
   background-color: #fff;
   border: double 5px #3cb371;
   color: #3cb371;
@@ -24,7 +54,7 @@ input {
   text-decoration: none;
 }
 
-.button_submit:hover {
+button:hover {
   color: #3cb371;
   background-color: #f0fff0;
 }

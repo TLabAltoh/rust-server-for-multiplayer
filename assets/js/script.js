@@ -61,9 +61,21 @@ const forms = document.getElementsByTagName("form");
 const form_action = ["room", "room/join", "room/exit", "room/create", "room/delete", "stream/whip", "stream/whep", "stream/reforward", "stream/infos", "send_rtc_message", "ws/connect", "send_ws_message"];
 
 function onTrack(event) {
-    var audioReceive = document.getElementById("audio_recv");
-    if (audioReceive.srcObject !== event.streams[0]) {
-        audioReceive.srcObject = event.streams[0];
+    const track = event.track;
+    const stream = event.streams[0];
+
+    var mediaReceive = null;
+    switch (track.kind) {
+        case "video":
+            mediaReceive = document.getElementById("video_recv");
+            break;
+        case "audio":
+            mediaReceive = document.getElementById("audio_recv");
+            break;
+    }
+
+    if (mediaReceive.srcObject !== stream) {
+        mediaReceive.srcObject = stream;
         console.log('received remote stream', event);
     }
 }
@@ -99,7 +111,8 @@ window.addEventListener('DOMContentLoaded', () => {
                         peerConnection.send(json.sender_message, json.to);
                         break;
                     case "stream/whip":
-                        peerConnection.whip(json, document.mediaStream);
+                        const stream = document.audioStream ? document.audioStream : document.videoStream;
+                        peerConnection.whip(json, stream);
                         break;
                     case "stream/whep":
                         peerConnection.whep(json, onTrack.bind(this));
@@ -172,24 +185,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const videoL = document.getElementById('videoL');
-    const videoR = document.getElementById('videoR');
-
-    videoL.addEventListener('canplay', () => {
-        let stream;
-        const fps = 0;
-        if (videoL.captureStream) {
-            stream = videoL.captureStream(fps);
-        } else if (videoL.mozCaptureStream) {
-            stream = videoL.mozCaptureStream(fps);
-        } else {
-            console.error('Stream capture is not supported');
-            stream = null;
-        }
-        videoR.srcObject = stream;
-    });
-
-    var queries = getUrlQueries();
+    const queries = getUrlQueries();
     document.duplicated = false;
     if (queries["room_id"]) {
         document.duplicated = true;
@@ -200,32 +196,71 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.recordingFlg = false;
-    document.mediaStream = null;
-    document.scriptProcessor = null;
+    const video = document.getElementById("video");
+
+    document.videoRecordingFlg = false;
+    document.videoStream = null;
+
+    video.addEventListener("play", startVideoRecording);
+    video.addEventListener("stop", endVideoRecording);
+
+    document.audioRecordingFlg = false;
+    document.audioStream = null;
+    document.audioProcessor = null;
     document.audioAnalyser = null;
 
-    var audioSend = document.getElementById("audio_send");
+    const audioSend = document.getElementById("audio_send");
     audioSend.addEventListener("play", () => {
-        startRecording(true);
+        startAudioRecording(true);
     });
-    audioSend.addEventListener("stop", endRecording);
+    audioSend.addEventListener("stop", endAudioRecording);
 
-    var audioRecv = document.getElementById("audio_recv");
+    const audioRecv = document.getElementById("audio_recv");
     audioRecv.addEventListener("play", () => {
-        startRecording(false);
+        startAudioRecording(false);
     });
-    audioRecv.addEventListener("stop", endRecording);
+    audioRecv.addEventListener("stop", endAudioRecording);
 
     document.canvas = document.getElementById("whip_audio_canvas");
     document.canvasContext = document.canvas.getContext("2d");
 });
 
+function startVideoRecording() {
+    document.videoRecordingFlg = true;
+
+    const video = document.getElementById("video");
+
+    let stream;
+    const fps = 0;
+    if (video.captureStream) {
+        stream = video.captureStream(fps);
+    } else if (video.mozCaptureStream) {
+        stream = video.mozCaptureStream(fps);
+    } else {
+        console.error('Stream capture is not supported');
+        stream = null;
+    }
+
+    document.videoStream = stream;
+}
+
+function endVideoRecording() {
+    document.videoRecordingFlg = false;
+
+    const stream = document.videoStream;
+    const tracks = stream.getTracks();
+
+    tracks.forEach((track) => {
+        track.stop();
+    });
+
+    document.videoStream = null;
+};
+
 function onAudioProcess(e) {
-    if (!document.recordingFlg) return;
+    if (!document.audioRecordingFlg) return;
 
     var input = e.inputBuffer.getChannelData(0);
-    var output = e.outputBuffer.getChannelData(0);
 
     var bufferData = new Float32Array(document.bufferSize);
     for (var i = 0; i < document.bufferSize; i++) {
@@ -272,61 +307,61 @@ function analyseVoice() {
     }
 }
 
-function startRecording(isWhip) {
-    document.recordingFlg = true;
+function startAudioRecording(isWhip) {
+    document.audioRecordingFlg = true;
 
     document.bufferSize = 1024;
     document.audioData = [];
 
     document.isWhip = isWhip;
-    var audioElementId;
-    var canvasElementId;
+    var audioId;
+    var canvasId;
     if (isWhip) {
-        audioElementId = "audio_send";
-        canvasElementId = "whip_audio_canvas";
+        audioId = "audio_send";
+        canvasId = "whip_audio_canvas";
     } else {
-        audioElementId = "audio_recv";
-        canvasElementId = "whep_audio_canvas";
+        audioId = "audio_recv";
+        canvasId = "whep_audio_canvas";
     }
 
-    document.audioElement = document.getElementById(audioElementId);
+    const audio = document.getElementById(audioId);
 
-    document.canvas = document.getElementById(canvasElementId);
+    document.canvas = document.getElementById(canvasId);
     document.canvasContext = document.canvas.getContext("2d");
 
     document.audioContext = new AudioContext();
     document.isFirefox = false;
 
-    if (document.audioElement.captureStream) {
-        document.mediaStream = document.audioElement.captureStream();
-    } else if (document.audioElement.mozCaptureStream) {
-        document.mediaStream = document.audioElement.mozCaptureStream();
+    if (audio.captureStream) {
+        document.audioStream = audio.captureStream();
+    } else if (audio.mozCaptureStream) {
+        document.audioStream = audio.mozCaptureStream();
         document.isFirefox = true;
     } else {
         console.error('Stream capture is not supported');
-        document.mediaStream = null;
+        document.audioStream = null;
     }
 
-    document.scriptProcessor = document.audioContext.createScriptProcessor(document.bufferSize, 1, 1);
-    var mediaStreamSource = isWhip ? new MediaElementAudioSourceNode(document.audioContext, { mediaElement: document.audioElement }) : document.audioContext.createMediaStreamSource(document.mediaStream);
-    mediaStreamSource.connect(document.scriptProcessor);
-    document.scriptProcessor.onaudioprocess = onAudioProcess;
-    document.scriptProcessor.connect(document.audioContext.destination);
+    document.audioProcessor = document.audioContext.createScriptProcessor(document.bufferSize, 1, 1);
+    var mediaStreamSource = isWhip ? new MediaElementAudioSourceNode(document.audioContext, { mediaElement: audio }) : document.audioContext.createMediaStreamSource(document.audioStream);
+    mediaStreamSource.connect(document.audioProcessor);
+    document.audioProcessor.onaudioprocess = onAudioProcess;
+    document.audioProcessor.connect(document.audioContext.destination);
 
     document.audioAnalyser = document.audioContext.createAnalyser();
     mediaStreamSource.connect(document.audioAnalyser);
     document.audioAnalyser.fftSize = 2048;
 };
 
-function endRecording() {
-    document.recordingFlg = false;
+function endAudioRecording() {
+    document.audioRecordingFlg = false;
 
-    const stream = document.mediaStream;
+    const stream = document.audioStream;
     const tracks = stream.getTracks();
 
     tracks.forEach((track) => {
         track.stop();
     });
 
-    document.mediaStream = null;
+    document.audioStream = null;
 };

@@ -75,21 +75,58 @@ class SfuPeerConnection extends SfuClient {
 
     this.peerConnection.ontrack = ontrack;
 
-    this.peerConnection.createOffer(ontrack !== null ? { offerToReceiveAudio: 1 } : null).then(
+    this.peerConnection.createOffer(ontrack !== null ? { offerToReceiveAudio: 1, offerToReceiveVideo: 1, } : null).then(
       this.onCreateOffer.bind(this),
       this.onCreateSessionDescriptionError.bind(this)
     );
   }
 
-  onCreateSessionDescriptionError(error) {
-    console.log('Failed to create session description: ' + error.toString());
+  setBandwidth(bandwidthInKbps) {
+    if ((adapter.browserDetails.browser === 'chrome' || adapter.browserDetails.browser === 'safari' || (adapter.browserDetails.browser === 'firefox' && adapter.browserDetails.version >= 64)) &&
+      'RTCRtpSender' in window &&
+      'setParameters' in window.RTCRtpSender.prototype) {
+
+      if (this.peerConnection === null) return;
+
+      this.peerConnection.getSenders().forEach(sender => {
+        const parameters = sender.getParameters();
+        if (!parameters.encodings) {
+          parameters.encodings = [{}];
+        }
+        if (bandwidthInKbps === 'unlimited') {
+          delete parameters.encodings[0].maxBitrate;
+        } else {
+          parameters.encodings[0].maxBitrate = bandwidthInKbps * 1000;
+        }
+        sender.setParameters(parameters);
+      });
+    }
   }
 
-  gotRemoteStream(event) {
-    if (rightVideo.srcObject !== event.streams[0]) {
-      rightVideo.srcObject = event.streams[0];
-      console.log('pc2 received remote stream', event);
-    }
+  pause() {
+    if (this.peerConnection === null) return;
+
+    this.peerConnection.getSenders().forEach(sender => {
+      console.log(sender.track.kind + ' pause');
+      const parameters = sender.getParameters();
+      parameters.encodings[0].active = false;
+      sender.setParameters(parameters);
+    });
+  }
+
+  resume() {
+    if (this.peerConnection === null) return;
+
+    this.peerConnection.getSenders().forEach(sender => {
+      console.log(sender.track.kind + ' resume');
+      const parameters = sender.getParameters();
+      parameters.encodings[0].active = true;
+      sender.setParameters(parameters);
+    });
+  }
+
+  onCreateSessionDescriptionError(error) {
+    console.log('Failed to create session description: ' + error.toString());
   }
 
   send(message, to) {
