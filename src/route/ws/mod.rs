@@ -6,7 +6,7 @@ use axum::Router;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::result::Result;
 use crate::room::Room;
@@ -106,19 +106,32 @@ async fn stream(
 
             let mut send_task = tokio::spawn(async move {
                 while let Ok(message) = user_receiver.recv().await {
-                    socekt_sender
-                        .send(Message::Binary(message.to_vec()))
-                        .await
-                        .unwrap();
+                    if let Err(_err) = socekt_sender.send(Message::Binary(message.to_vec())).await {
+                        // Maybe stream has been closed
+                        return;
+                    }
                 }
             });
 
             let mut recv_task = tokio::spawn(async move {
                 let id = id;
-                let mut header = vec![0u8; 4]; // from (0 ~ 3) + to (4 ~ 7)
+                let mut header = vec![0u8; 5]; // typ (1) + from (0 ~ 3) + to (4 ~ 7)
                 for i in 0..4 {
-                    header[i] = (id >> (i * 8)) as u8;
+                    header[i + 1] = (id >> (i * 8)) as u8;
                 }
+
+                header[0] = 1; // connect
+                let mut dummy_buf = vec![0u8; 4];
+                for i in 0..4 {
+                    dummy_buf[i] = (id >> (i * 8)) as u8;
+                }
+                if let Err(err) = group_sender.send([header.clone(), dummy_buf.clone()].concat()) {
+                    info!("send socket err: {}", err);
+                    return;
+                }
+
+                header[0] = 0; // struct
+
                 while let Some(Ok(message)) = socket_receiver.next().await {
                     match message {
                         // Unity's NativeWebSocket handles both text and binary as a
@@ -126,12 +139,15 @@ async fn stream(
                         // server only uses binary for WebSocket.
                         Message::Binary(binary) => {
                             debug!("received binary message: {:?}", &binary);
-                            let is_broadcast = header[..4] == binary[..4];
+                            let is_broadcast = header[1..5] == binary[..4];
                             if is_broadcast {
                                 debug!("send broadcast message");
-                                group_sender
-                                    .send([header.clone(), binary].concat())
-                                    .unwrap();
+                                if let Err(err) =
+                                    group_sender.send([header.clone(), binary].concat())
+                                {
+                                    info!("send socket err: {}", err);
+                                    return;
+                                }
                             } else {
                                 debug!("send unicast message");
                                 let to = u32::from_be_bytes([
@@ -139,7 +155,12 @@ async fn stream(
                                 ]);
                                 let user_sender_map = user_sender_map.read().unwrap();
                                 if let Some(user_sender) = user_sender_map.get(&to) {
-                                    user_sender.send([header.clone(), binary].concat()).unwrap();
+                                    if let Err(err) =
+                                        user_sender.send([header.clone(), binary].concat())
+                                    {
+                                        info!("send socket err: {}", err);
+                                        return;
+                                    }
                                 }
                                 drop(user_sender_map);
                             }
@@ -152,7 +173,15 @@ async fn stream(
                         }
                         Message::Ping(_vec) => {}
                         Message::Pong(_vec) => {}
-                        Message::Close(_close_frame) => {}
+                        Message::Close(_close_frame) => {
+                            header[0] = 2; // disconnect
+                            if let Err(err) =
+                                group_sender.send([header.clone(), dummy_buf.clone()].concat())
+                            {
+                                info!("send socket err: {}", err);
+                                return;
+                            }
+                        }
                     }
                 }
             });

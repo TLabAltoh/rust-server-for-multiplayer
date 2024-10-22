@@ -5,10 +5,6 @@ class SfuPeerConnection extends SfuClient {
     this.dataChannel;
   }
 
-  buffer_to_string(buf) {
-    return String.fromCharCode.apply("", new Uint8Array(buf));
-  }
-
   whip(json, stream) {
     this.json = json;
     this.action = "stream/whip";
@@ -25,13 +21,13 @@ class SfuPeerConnection extends SfuClient {
     this.dataChannel.onmessage = (event) => {
       console.log("message received: ", this.buffer_to_string(event.data));
     };
+    this.dataChannel.onopen = this.ondataChannelStateChange.bind(this);
+    this.dataChannel.onclose = this.ondataChannelStateChange.bind(this);
     console.log('Created send data channel');
 
     this.peerConnection.onicecandidate = e => {
       this.onIceCandidate(this.peerConnection, e);
     };
-    this.dataChannel.onopen = this.ondataChannelStateChange.bind(this);
-    this.dataChannel.onclose = this.ondataChannelStateChange.bind(this);
 
     this.localCandidates = [];
     this.remoteCandidates = [];
@@ -59,16 +55,14 @@ class SfuPeerConnection extends SfuClient {
     console.log('Created peer connection object');
 
     this.dataChannel = this.peerConnection.createDataChannel('demoDataChannel');
-    this.dataChannel.onmessage = (event) => {
-      console.log("message received: ", this.buffer_to_string(event.data));
-    };
+    this.dataChannel.onmessage = this.onReceiveMessageCallback.bind(this);
+    this.dataChannel.onopen = this.ondataChannelStateChange.bind(this);
+    this.dataChannel.onclose = this.ondataChannelStateChange.bind(this);
     console.log('Created send data channel');
 
     this.peerConnection.onicecandidate = e => {
       this.onIceCandidate(this.peerConnection, e);
     };
-    this.dataChannel.onopen = this.ondataChannelStateChange.bind(this);
-    this.dataChannel.onclose = this.ondataChannelStateChange.bind(this);
 
     this.localCandidates = [];
     this.remoteCandidates = [];
@@ -232,16 +226,19 @@ class SfuPeerConnection extends SfuClient {
     console.log(`Failed to add Ice Candidate: ${error.toString()}`);
   }
 
-  receiveChannelCallback(event) {
-    console.log('Receive Channel Callback');
-    this.dataChannel = event.channel;
-    this.dataChannel.onmessage = this.onReceiveMessageCallback.bind(this);
-    this.dataChannel.onopen = this.ondataChannelStateChange.bind(this);
-    this.dataChannel.onclose = this.ondataChannelStateChange.bind(this);
-  }
-
   onReceiveMessageCallback(event) {
-    console.log('Received Message: ' + new TextDecoder().decode(event.data));
+    const buf = new Uint8Array(event.data);
+    switch (buf[0]) {
+      case 0:
+        console.log('[rtc-sfu] message: ' + this.buffer_to_string(buf.slice(9)));
+        break;
+      case 1:
+        console.log('[rtc-sfu] connect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+        break;
+      case 2:
+        console.log('[rtc-sfu] disconnect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+        break;
+    }
   }
 
   ondataChannelStateChange() {

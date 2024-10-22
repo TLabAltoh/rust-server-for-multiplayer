@@ -96,11 +96,13 @@ impl Group {
                 let mut broadcast_pipe = self.tx.subscribe();
                 let broadcast_pipe = tokio::spawn(async move {
                     while let Ok(data) = broadcast_pipe.recv().await {
-                        let from = u32::from_be_bytes([data[3], data[2], data[1], data[0]]);
+                        let from = u32::from_be_bytes([data[4], data[3], data[2], data[1]]);
                         if from == user {
                             continue; // This message was sent from own
                         }
-                        let _ = pipe_sender.send(data);
+                        if let Err(_err) = pipe_sender.send(data) {
+                            return;
+                        }
                     }
                 });
                 v.insert(UserTask { broadcast_pipe });

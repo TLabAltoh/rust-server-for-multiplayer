@@ -51,7 +51,18 @@ class SfuWebSocket extends SfuClient {
         });
 
         sock.addEventListener("message", e => {
-            console.log("[ws-sfu] message: " + new TextDecoder().decode(e.data));
+            const buf = new Uint8Array(e.data);
+            switch (buf[0]) {
+                case 0:
+                    console.log("[ws-sfu] message: " + this.buffer_to_string(buf.slice(9)));
+                    break;
+                case 1:
+                    console.log('[ws-sfu] connect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+                    break;
+                case 2:
+                    console.log('[ws-sfu] disconnect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+                    break;
+            }
         });
 
         sock.addEventListener("close", e => {

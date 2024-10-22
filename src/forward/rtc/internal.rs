@@ -192,12 +192,23 @@ impl PeerForwardInternal {
         group_sender: broadcast::Sender<Vec<u8>>,
         user_sender_map: Arc<RwLock<HashMap<u32, broadcast::Sender<Vec<u8>>>>>,
     ) {
-        let mut buffer = vec![0u8; 8 + MESSAGE_SIZE]; // from (0 ~ 3) + to (4 ~ 7)
+        let mut buffer = vec![0u8; 9 + MESSAGE_SIZE]; // typ (1) + from (0 ~ 3) + to (4 ~ 7)
+
+        buffer[0] = 1; // typ: connect
         for i in 0..4 {
-            buffer[i] = (id >> (i * 8)) as u8;
+            buffer[i + 1] = (id >> (i * 8)) as u8;
         }
+        for i in 0..4 {
+            buffer[i + 5] = (id >> (i * 8)) as u8;
+        }
+        if let Err(err) = group_sender.send(buffer[..9].to_vec()) {
+            info!("send data channel err: {}", err);
+            return;
+        }
+
+        buffer[0] = 0; // typ: struct
         loop {
-            let n = match d.read(&mut buffer[4..]).await {
+            let n = match d.read(&mut buffer[5..]).await {
                 Ok(n) => n,
                 Err(err) => {
                     info!("Datachannel closed; Exit the read_loop: {err}");
@@ -208,16 +219,16 @@ impl PeerForwardInternal {
                 break;
             }
 
-            let is_broadcast = buffer[..4] == buffer[4..8];
+            let is_broadcast = buffer[1..5] == buffer[5..9];
             if is_broadcast {
                 debug!("[rtc] send broadcast message");
-                if let Err(err) = group_sender.send(buffer[..n + 4].to_vec()) {
+                if let Err(err) = group_sender.send(buffer[..n + 5].to_vec()) {
                     info!("send data channel err: {}", err);
                     return;
                 }
             } else {
                 debug!("[rtc] send unicast message");
-                let to = u32::from_be_bytes([buffer[7], buffer[6], buffer[5], buffer[4]]);
+                let to = u32::from_be_bytes([buffer[8], buffer[7], buffer[6], buffer[5]]);
                 let user_sender_map = user_sender_map.read().await;
                 if let Some(user_sender) = user_sender_map.get(&to) {
                     if let Err(err) = user_sender.send(buffer[..n + 4].to_vec()) {
@@ -250,7 +261,7 @@ impl PeerForwardInternal {
         mut group_receiver: broadcast::Receiver<Vec<u8>>,
     ) {
         while let Ok(msg) = group_receiver.recv().await {
-            let from = u32::from_be_bytes([msg[3], msg[2], msg[1], msg[0]]);
+            let from = u32::from_be_bytes([msg[4], msg[3], msg[2], msg[1]]);
             if from == id {
                 continue; // This message was sent from own
             }
@@ -265,6 +276,23 @@ impl PeerForwardInternal {
 
 // publish
 impl PeerForwardInternal {
+    pub(crate) fn notice_network_event(&self, id: u32, connect: bool) {
+        let mut buffer = vec![0u8; 9]; // typ (1) + from (0 ~ 3) + to (4 ~ 7)
+
+        buffer[0] = if connect { 1 } else { 2 };
+        for i in 0..4 {
+            buffer[i + 1] = (id >> (i * 8)) as u8;
+        }
+        for i in 0..4 {
+            buffer[i + 5] = (id >> (i * 8)) as u8;
+        }
+        let group_sender = self.data_channel_forward.sender.clone();
+        if let Err(err) = group_sender.send(buffer[..9].to_vec()) {
+            info!("send data channel err: {}", err);
+            return;
+        }
+    }
+
     pub(crate) async fn publish_is_some(&self) -> bool {
         let publish = self.publish.read().await;
         publish.is_some()

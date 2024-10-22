@@ -17,4 +17,8 @@ class SfuClient {
         }
         return value;
     };
+
+    buffer_to_string(buf /*Uint8Array*/) {
+        return String.fromCharCode.apply("", buf);
+    }
 }
