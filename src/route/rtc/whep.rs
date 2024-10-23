@@ -65,8 +65,6 @@ async fn whep(
         Err(err_response) => return Ok(err_response),
     };
 
-    debug!("wait for lock gracted");
-
     let forwarder = room.forwarder();
     let forwarder = forwarder.write().await;
     if !forwarder.is_stream_exists(json.stream.clone()).await? {
@@ -104,15 +102,11 @@ async fn whep(
                     if let Some(candidate) = candidate {
                         return Box::pin(async move {
                             let c = candidate.to_json().unwrap().candidate;
-                            if let Err(_err) = tx0.clone().send((0, c.clone())).await {
-                                // Maybe channel is closed ...
-                                // error!("{}", _err);
-                            }
+                            if let Err(_err) = tx0.clone().send((0, c.clone())).await {}
                         });
                     }
                     Box::pin(async {})
                 }),
-                Box::new(move || Box::pin(async {})),
             )
             .await?;
         let id = json.user_id as u32;
@@ -127,15 +121,12 @@ async fn whep(
                     if let Some(candidate) = candidate {
                         return Box::pin(async move {
                             let c = candidate.to_json().unwrap().candidate;
-                            if let Err(_err) = tx1.clone().send((1, c.clone())).await {
-                                // Maybe channel is closed ...
-                                // error!("{}", _err);
-                            }
+                            if let Err(_err) = tx1.clone().send((1, c.clone())).await {}
                         });
                     }
                     Box::pin(async {})
                 }),
-                Box::new(move || Box::pin(async move {})),
+                Box::new(move || Box::pin(async {})),
             )
             .await?;
         peer0.set_remote_description(answer).await?;
@@ -193,8 +184,8 @@ async fn whep(
 
             while !forwarder.publish_is_ok(stream.clone()).await.unwrap() {}
 
-            let (tx0, mut rx0) = mpsc::channel::<String>(32);
-            let (tx1, mut rx1) = mpsc::channel::<String>(32);
+            let (tx0, mut rx0) = mpsc::channel::<(bool, String)>(32);
+            let tx1 = tx0.clone();
             let (peer, answer, session) = forwarder
                 .subscribe(
                     stream.clone(),
@@ -206,10 +197,7 @@ async fn whep(
                         if let Some(candidate) = candidate {
                             return Box::pin(async move {
                                 let c = candidate.to_json().unwrap().candidate;
-                                if let Err(_err) = tx0.clone().send(c.clone()).await {
-                                    // Maybe channel is closed ...
-                                    // error!("{}", _err);
-                                }
+                                if let Err(_err) = tx0.clone().send((false, c.clone())).await {}
                             });
                         }
                         Box::pin(async {})
@@ -217,7 +205,7 @@ async fn whep(
                     Box::new(move || {
                         let tx1 = tx1.clone();
                         Box::pin(async move {
-                            if let Err(_err) = tx1.clone().send("".to_string()).await {}
+                            if let Err(_err) = tx1.clone().send((true, "".to_string())).await {}
                         })
                     }),
                 )
@@ -242,14 +230,8 @@ async fn whep(
 
             let (mut sender, mut receiver) = socket.split();
 
-            let mut manag_task = tokio::spawn(async move {
-                while let Some(_msg) = rx1.recv().await {
-                    break;
-                }
-            });
-
             let mut send_task = tokio::spawn(async move {
-                while let Some(candidate) = rx0.recv().await {
+                while let Some((peer_connected, candidate)) = rx0.recv().await {
                     let signaling = SIGNALING {
                         is_candidate: true,
                         sdp: String::new(),
@@ -257,7 +239,7 @@ async fn whep(
                         candidate: candidate,
                     };
                     let msg = ws::Message::Text(serde_json::to_string(&signaling).unwrap());
-                    if sender.send(msg).await.is_err() {
+                    if sender.send(msg).await.is_err() || peer_connected {
                         return;
                     }
                 }
@@ -297,15 +279,9 @@ async fn whep(
             tokio::select! {
                 _rv_a = (&mut send_task) => {
                     recv_task.abort();
-                    manag_task.abort();
                 },
                 _rv_b = (&mut recv_task) => {
                     send_task.abort();
-                    manag_task.abort();
-                }
-                _rv_c = (&mut manag_task) => {
-                    send_task.abort();
-                    recv_task.abort();
                 }
             }
         })

@@ -11,7 +11,7 @@ use webrtc::peer_connection::RTCPeerConnection;
 use crate::config::Config;
 use crate::error::AppError;
 use crate::forward::rtc::message::{ForwardInfo, Layer};
-use crate::forward::rtc::{OnPeerConnectedHdlrFn, PeerForward};
+use crate::forward::rtc::{OnPeerConnectionEvtHdlrFn, PeerForward};
 use crate::result::Result;
 
 use chrono::{DateTime, Utc};
@@ -179,20 +179,15 @@ impl Forwarder {
         &self,
         stream: String,
         on_ice_candidate: OnLocalCandidateHdlrFn,
-        on_peer_connected: OnPeerConnectedHdlrFn,
     ) -> Result<(Arc<RTCPeerConnection>, RTCSessionDescription, String)> {
         let stream_map = self.stream_map.read().await;
         let forward = stream_map.get(&stream).cloned();
         drop(stream_map);
         if let Some(forward) = forward {
-            forward
-                .gen_virtual_publish(on_ice_candidate, on_peer_connected)
-                .await
+            forward.gen_virtual_publish(on_ice_candidate).await
         } else {
             let forward = PeerForward::new(stream.clone(), self.config.ice_servers.clone());
-            let (peer, sdp, session) = forward
-                .gen_virtual_publish(on_ice_candidate, on_peer_connected)
-                .await?;
+            let (peer, sdp, session) = forward.gen_virtual_publish(on_ice_candidate).await?;
             let mut stream_map = self.stream_map.write().await;
             if stream_map.contains_key(&stream) {
                 let _ = forward.close().await;
@@ -210,7 +205,7 @@ impl Forwarder {
         id: u32,
         offer: RTCSessionDescription,
         on_ice_candidate: OnLocalCandidateHdlrFn,
-        on_peer_connected: OnPeerConnectedHdlrFn,
+        on_peer_connected: OnPeerConnectionEvtHdlrFn,
     ) -> Result<(Arc<RTCPeerConnection>, RTCSessionDescription, String)> {
         let stream_map = self.stream_map.read().await;
         let forward = stream_map.get(&stream).cloned();
@@ -252,7 +247,7 @@ impl Forwarder {
         id: u32,
         offer: RTCSessionDescription,
         on_ice_candidate: OnLocalCandidateHdlrFn,
-        on_peer_connected: OnPeerConnectedHdlrFn,
+        on_peer_connected: OnPeerConnectionEvtHdlrFn,
     ) -> Result<(Arc<RTCPeerConnection>, RTCSessionDescription, String)> {
         let stream_map = self.stream_map.read().await;
         let forward = stream_map.get(&stream).cloned();

@@ -82,8 +82,8 @@ async fn whip(
 
             drop(rooms);
 
-            let (tx0, mut rx0) = mpsc::channel::<String>(32);
-            let (tx1, mut rx1) = mpsc::channel::<String>(32);
+            let (tx0, mut rx0) = mpsc::channel::<(bool, String)>(32);
+            let tx1 = tx0.clone();
             let (peer, answer, session) = forwarder
                 .publish(
                     stream.clone(),
@@ -95,10 +95,7 @@ async fn whip(
                         if let Some(candidate) = candidate {
                             return Box::pin(async move {
                                 let c = candidate.to_json().unwrap().candidate;
-                                if let Err(_err) = tx0.clone().send(c.clone()).await {
-                                    // Maybe channel is closed ...
-                                    // error!("{}", _err);
-                                }
+                                if let Err(_err) = tx0.clone().send((false, c.clone())).await {}
                             });
                         }
                         Box::pin(async {})
@@ -106,7 +103,7 @@ async fn whip(
                     Box::new(move || {
                         let tx1 = tx1.clone();
                         Box::pin(async move {
-                            if let Err(_err) = tx1.clone().send("".to_string()).await {}
+                            if let Err(_err) = tx1.clone().send((true, "".to_string())).await {}
                         })
                     }),
                 )
@@ -134,14 +131,8 @@ async fn whip(
 
             let (mut sender, mut receiver) = socket.split();
 
-            let mut manag_task = tokio::spawn(async move {
-                while let Some(_msg) = rx1.recv().await {
-                    break;
-                }
-            });
-
             let mut send_task = tokio::spawn(async move {
-                while let Some(candidate) = rx0.recv().await {
+                while let Some((peer_connected, candidate)) = rx0.recv().await {
                     let signaling = SIGNALING {
                         is_candidate: true,
                         sdp: String::new(),
@@ -149,7 +140,7 @@ async fn whip(
                         candidate: candidate,
                     };
                     let msg = ws::Message::Text(serde_json::to_string(&signaling).unwrap());
-                    if sender.send(msg).await.is_err() {
+                    if sender.send(msg).await.is_err() || peer_connected {
                         return;
                     }
                 }
@@ -189,15 +180,9 @@ async fn whip(
             tokio::select! {
                 _rv_a = (&mut send_task) => {
                     recv_task.abort();
-                    manag_task.abort();
                 },
                 _rv_b = (&mut recv_task) => {
                     send_task.abort();
-                    manag_task.abort();
-                }
-                _rv_c = (&mut manag_task) => {
-                    send_task.abort();
-                    recv_task.abort();
                 }
             }
         })
