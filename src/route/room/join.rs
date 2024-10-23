@@ -76,11 +76,6 @@ async fn room_join(Path(params): Path<HashMap<String, String>>) -> Result<Respon
         ));
     }
 
-    let group_manager = room.group_manager();
-    let group_manager = group_manager.write().await;
-    group_manager.init_user(user_id as u32).await;
-    drop(group_manager);
-
     let json = RESPONSE {
         user_id: user_id.clone(),
         user_token: user_token.clone(),

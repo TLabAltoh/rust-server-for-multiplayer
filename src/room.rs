@@ -152,10 +152,16 @@ impl Room {
         let client = clients.get(&user_id).cloned();
         drop(clients);
 
+        let group_manager = self.group_manager();
+        let group_manager = group_manager.write().await;
+        group_manager.end_user(user_id as u32).await;
+        drop(group_manager);
+
         if let Some(mut client) = client {
             if check_token && !client.check_token(user_token.clone()) {
                 return Ok(false);
             }
+
             for stream in client.get_streams().await {
                 let forwarder = self.forwarder.write().await;
                 forwarder.stream_delete(stream.clone()).await?;
@@ -173,6 +179,14 @@ impl Room {
         Ok(false)
     }
 
+    async fn _join(&self, user_id: i32, _user_token: u32) -> Result<()> {
+        let group_manager = self.group_manager();
+        let group_manager = group_manager.write().await;
+        group_manager.init_user(user_id as u32).await;
+        drop(group_manager);
+        Ok(())
+    }
+
     pub async fn join(
         &mut self,
         user_name: String,
@@ -184,44 +198,48 @@ impl Room {
 
         if self.needs_host {
             if master_key != "" {
-                if self.check_master_key(master_key) && !clients.contains_key(&0) {
-                    *user_id = 0;
-                    *user_token = utils::unique::generate_unique_u32();
-                    clients.insert(
-                        *user_id,
-                        Client::new(user_id.clone(), user_token.clone(), user_name.clone()).await?,
-                    );
-                    return Ok(true);
+                if !self.check_master_key(master_key) || clients.contains_key(&0) {
+                    return Ok(false);
                 }
-                return Ok(false);
+                *user_id = 0;
+                *user_token = utils::unique::generate_unique_u32();
             } else {
+                let mut is_ok = false;
                 for i in 1..self.capacity.try_into().unwrap() {
-                    if !clients.contains_key(&i) {
-                        *user_id = i.try_into().unwrap();
-                        *user_token = utils::unique::generate_unique_u32();
-                        clients.insert(
-                            *user_id,
-                            Client::new(user_id.clone(), user_token.clone(), user_name.clone())
-                                .await?,
-                        );
-                        return Ok(true);
+                    if clients.contains_key(&i) {
+                        continue;
                     }
-                }
-                return Ok(false);
-            }
-        } else {
-            for i in 0..self.capacity.try_into().unwrap() {
-                if !clients.contains_key(&i) {
+                    is_ok = true;
                     *user_id = i.try_into().unwrap();
                     *user_token = utils::unique::generate_unique_u32();
-                    clients.insert(
-                        *user_id,
-                        Client::new(user_id.clone(), user_token.clone(), user_name.clone()).await?,
-                    );
-                    return Ok(true);
+                    break;
+                }
+                if !is_ok {
+                    return Ok(false);
                 }
             }
-            return Ok(false);
+        } else {
+            let mut is_ok = false;
+            for i in 0..self.capacity.try_into().unwrap() {
+                if clients.contains_key(&i) {
+                    continue;
+                }
+                is_ok = true;
+                *user_id = i.try_into().unwrap();
+                *user_token = utils::unique::generate_unique_u32();
+                break;
+            }
+            if !is_ok {
+                return Ok(false);
+            }
         }
+
+        clients.insert(
+            *user_id,
+            Client::new(user_id.clone(), user_token.clone(), user_name.clone()).await?,
+        );
+        self._join(user_id.clone(), user_token.clone()).await?;
+
+        Ok(true)
     }
 }
