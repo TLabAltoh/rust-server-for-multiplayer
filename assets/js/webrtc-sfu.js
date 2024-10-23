@@ -244,14 +244,5 @@ class SfuPeerConnection extends SfuClient {
   ondataChannelStateChange() {
     const readyState = this.dataChannel.readyState;
     console.log('Send channel state is: ' + readyState);
-
-    if (readyState == "open") {
-      if (this.sock != null) {
-        this.sock.close();
-      }
-
-      clearInterval(this.localCandidateTask);
-      clearInterval(this.remoteCandidateTask);
-    }
   }
 }

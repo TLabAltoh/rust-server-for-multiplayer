@@ -1,3 +1,5 @@
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use tokio::sync::Mutex;
@@ -32,6 +34,9 @@ pub struct PeerForward {
     internal: Arc<PeerForwardInternal>,
 }
 
+pub type OnPeerConnectedHdlrFn =
+    Box<dyn (FnMut() -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>) + Send + Sync>;
+
 impl PeerForward {
     pub fn new(stream: impl ToString, ice_server: Vec<RTCIceServer>) -> Self {
         PeerForward {
@@ -43,14 +48,21 @@ impl PeerForward {
     pub async fn gen_virtual_publish(
         &self,
         on_ice_candidate: OnLocalCandidateHdlrFn,
+        on_peer_connected: OnPeerConnectedHdlrFn,
     ) -> Result<(Arc<RTCPeerConnection>, RTCSessionDescription, String)> {
         let peer = self.internal.new_virtual_publish_peer().await?;
         let pc = Arc::downgrade(&peer);
+        let on_peer_connected = Arc::new(Mutex::new(on_peer_connected));
         peer.on_ice_candidate(on_ice_candidate);
         peer.on_peer_connection_state_change(Box::new(move |s: RTCPeerConnectionState| {
             if let Some(pc) = pc.upgrade() {
+                let on_peer_connected = on_peer_connected.clone();
                 tokio::spawn(async move {
                     match s {
+                        RTCPeerConnectionState::Connected => {
+                            let mut on_peer_connected = on_peer_connected.lock().await;
+                            on_peer_connected().await;
+                        }
                         RTCPeerConnectionState::Failed | RTCPeerConnectionState::Disconnected => {
                             let _ = pc.close().await;
                         }
@@ -78,6 +90,7 @@ impl PeerForward {
         id: u32,
         offer: RTCSessionDescription,
         on_ice_candidate: OnLocalCandidateHdlrFn,
+        on_peer_connected: OnPeerConnectedHdlrFn,
     ) -> Result<(Arc<RTCPeerConnection>, RTCSessionDescription, String)> {
         if self.internal.publish_is_some().await {
             return Err(AppError::stream_already_exists(
@@ -122,6 +135,8 @@ impl PeerForward {
         }));
         let internal = Arc::downgrade(&self.internal);
         let pc = Arc::downgrade(&peer);
+        let _track = Arc::new(Mutex::new(false));
+        let datachannel = Arc::new(Mutex::new(false));
         peer.on_track(Box::new(move |track, _, _| {
             if let (Some(internal), Some(pc)) = (internal.upgrade(), pc.upgrade()) {
                 tokio::spawn(async move {
@@ -134,8 +149,12 @@ impl PeerForward {
         let pc = Arc::downgrade(&peer);
         peer.on_data_channel(Box::new(move |dc| {
             if let (Some(internal), Some(pc)) = (internal.upgrade(), pc.upgrade()) {
+                let datachannel = datachannel.clone();
                 tokio::spawn(async move {
                     let _ = internal.publish_data_channel(pc, id, dc).await;
+                    let mut datachannel = datachannel.lock().await;
+                    *datachannel = true;
+                    drop(datachannel);
                 });
             }
             Box::pin(async {})
@@ -155,6 +174,7 @@ impl PeerForward {
         id: u32,
         offer: RTCSessionDescription,
         on_ice_candidate: OnLocalCandidateHdlrFn,
+        on_peer_connected: OnPeerConnectedHdlrFn,
     ) -> Result<(Arc<RTCPeerConnection>, RTCSessionDescription, String)> {
         if !self.internal.publish_is_ok().await {
             return Err(AppError::throw("publish is not ok"));
@@ -165,9 +185,11 @@ impl PeerForward {
             .await?;
         let internal = Arc::downgrade(&self.internal);
         let pc = Arc::downgrade(&peer);
+        let on_peer_connected = Arc::new(Mutex::new(on_peer_connected));
         peer.on_ice_candidate(on_ice_candidate);
         peer.on_peer_connection_state_change(Box::new(move |s: RTCPeerConnectionState| {
             if let (Some(internal), Some(pc)) = (internal.upgrade(), pc.upgrade()) {
+                let on_peer_connected = on_peer_connected.clone();
                 tokio::spawn(async move {
                     info!(
                         "[{}] [subscribe] [{}] connection state changed: {}",
@@ -176,10 +198,13 @@ impl PeerForward {
                         s
                     );
                     match s {
+                        RTCPeerConnectionState::Connected => {
+                            let mut on_peer_connected = on_peer_connected.lock().await;
+                            on_peer_connected().await;
+                        }
                         RTCPeerConnectionState::Failed | RTCPeerConnectionState::Disconnected => {
                             let _ = pc.close().await;
                         }
-
                         RTCPeerConnectionState::Closed => {
                             internal.notice_network_event(id.clone(), false);
                             let _ = internal.remove_subscribe(id.clone(), pc).await;

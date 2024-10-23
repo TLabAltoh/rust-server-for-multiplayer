@@ -82,7 +82,8 @@ async fn whip(
 
             drop(rooms);
 
-            let (tx0, mut rx) = mpsc::channel::<String>(32);
+            let (tx0, mut rx0) = mpsc::channel::<String>(32);
+            let (tx1, mut rx1) = mpsc::channel::<String>(32);
             let (peer, answer, session) = forwarder
                 .publish(
                     stream.clone(),
@@ -101,6 +102,12 @@ async fn whip(
                             });
                         }
                         Box::pin(async {})
+                    }),
+                    Box::new(move || {
+                        let tx1 = tx1.clone();
+                        Box::pin(async move {
+                            if let Err(_err) = tx1.clone().send("".to_string()).await {}
+                        })
                     }),
                 )
                 .await
@@ -127,8 +134,14 @@ async fn whip(
 
             let (mut sender, mut receiver) = socket.split();
 
+            let mut manag_task = tokio::spawn(async move {
+                while let Some(_msg) = rx1.recv().await {
+                    break;
+                }
+            });
+
             let mut send_task = tokio::spawn(async move {
-                while let Some(candidate) = rx.recv().await {
+                while let Some(candidate) = rx0.recv().await {
                     let signaling = SIGNALING {
                         is_candidate: true,
                         sdp: String::new(),
@@ -176,9 +189,15 @@ async fn whip(
             tokio::select! {
                 _rv_a = (&mut send_task) => {
                     recv_task.abort();
+                    manag_task.abort();
                 },
                 _rv_b = (&mut recv_task) => {
                     send_task.abort();
+                    manag_task.abort();
+                }
+                _rv_c = (&mut manag_task) => {
+                    send_task.abort();
+                    recv_task.abort();
                 }
             }
         })
