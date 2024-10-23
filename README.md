@@ -16,15 +16,15 @@ cd REPOSITORY_ROOT
 run.bat
 ```
 
-## Debug Tool
+### Debug
 This repository contains a browser-based debugging tool. Run the command below to open it.
 
-### Chrome
+#### Chrome
 ```bat
 start chrome http://localhost:7777 --auto-open-devtools-for-tabs
 ```
 
-### Firefox
+#### Firefox
 ```bat
 start firefox http://localhost:7777 -devtools
 ```
