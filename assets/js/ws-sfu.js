@@ -57,10 +57,10 @@ class SfuWebSocket extends SfuClient {
                     console.log("[ws-sfu] message: " + this.buffer_to_string(buf.slice(9)));
                     break;
                 case 1:
-                    console.log('[ws-sfu] connect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+                    console.log('[ws-sfu] open: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
                     break;
                 case 2:
-                    console.log('[ws-sfu] disconnect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+                    console.log('[ws-sfu] close: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
                     break;
             }
         });

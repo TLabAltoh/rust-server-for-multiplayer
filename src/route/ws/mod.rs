@@ -120,7 +120,7 @@ async fn stream(
                     header[i + 1] = (id >> (i * 8)) as u8;
                 }
 
-                header[0] = 1; // connect
+                header[0] = 1; // open
                 let mut dummy_buf = vec![0u8; 4];
                 for i in 0..4 {
                     dummy_buf[i] = (id >> (i * 8)) as u8;
@@ -174,7 +174,7 @@ async fn stream(
                         Message::Ping(_vec) => {}
                         Message::Pong(_vec) => {}
                         Message::Close(_close_frame) => {
-                            header[0] = 2; // disconnect
+                            header[0] = 2; // close
                             if let Err(err) =
                                 group_sender.send([header.clone(), dummy_buf.clone()].concat())
                             {

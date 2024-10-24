@@ -233,10 +233,10 @@ class SfuPeerConnection extends SfuClient {
         console.log('[rtc-sfu] message: ' + this.buffer_to_string(buf.slice(9)));
         break;
       case 1:
-        console.log('[rtc-sfu] connect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+        console.log('[rtc-sfu] open: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
         break;
       case 2:
-        console.log('[rtc-sfu] disconnect: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
+        console.log('[rtc-sfu] close: ' + this.Uint8ArrayToi32(buf.slice(1, 4)));
         break;
     }
   }

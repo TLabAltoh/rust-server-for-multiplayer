@@ -194,7 +194,7 @@ impl PeerForwardInternal {
     ) {
         let mut buffer = vec![0u8; 9 + MESSAGE_SIZE]; // typ (1) + from (0 ~ 3) + to (4 ~ 7)
 
-        buffer[0] = 1; // typ: connect
+        buffer[0] = 1; // typ: open
         for i in 0..4 {
             buffer[i + 1] = (id >> (i * 8)) as u8;
         }
@@ -276,10 +276,10 @@ impl PeerForwardInternal {
 
 // publish
 impl PeerForwardInternal {
-    pub(crate) fn notice_network_event(&self, id: u32, connect: bool) {
+    pub(crate) fn notice_network_event(&self, id: u32, open: bool) {
         let mut buffer = vec![0u8; 9]; // typ (1) + from (0 ~ 3) + to (4 ~ 7)
 
-        buffer[0] = if connect { 1 } else { 2 };
+        buffer[0] = if open { 1 } else { 2 };
         for i in 0..4 {
             buffer[i + 1] = (id >> (i * 8)) as u8;
         }
