@@ -23,7 +23,7 @@ pub fn route() -> Router<AppState> {
 struct JSON {
     room_name: String,
     room_capacity: u32,
-    room_pass: String,
+    room_key: String,
     needs_host: bool,
     is_public: bool,
     master_key: String,
@@ -51,7 +51,7 @@ async fn create_room(
         json.needs_host,
         json.is_public,
         json.room_capacity,
-        json.room_pass,
+        json.room_key,
         json.master_key,
         json.description,
         state.config,

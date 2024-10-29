@@ -27,7 +27,7 @@ pub fn route() -> Router<AppState> {
 #[derive(Serialize, Deserialize)]
 struct JSON {
     room_id: i32,
-    room_pass: String,
+    room_key: String,
     user_id: i32,
     user_token: u32,
     stream: String,
@@ -55,7 +55,7 @@ async fn whep(
 
     let (room, _client) = match auth_user(
         json.room_id.clone(),
-        json.room_pass.clone(),
+        json.room_key.clone(),
         json.user_id,
         json.user_token,
     )

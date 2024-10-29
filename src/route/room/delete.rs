@@ -44,7 +44,7 @@ async fn delete_room(Path(params): Path<HashMap<String, String>>) -> Result<Resp
     }
 
     let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
-    if !room.check_master_key(json.master_key.clone()) {
+    if !room.auth_master_key(json.master_key.clone()) {
         return Ok(http::create_response(
             Body::from(BodyUtil::REJECTED),
             StatusCode::NOT_ACCEPTABLE,

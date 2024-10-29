@@ -34,7 +34,7 @@ pub fn route() -> Router<AppState> {
 #[derive(Serialize, Deserialize)]
 struct JSON {
     room_id: i32,
-    room_pass: String,
+    room_key: String,
     user_id: i32,
     user_token: u32,
     stream: String,
@@ -43,7 +43,7 @@ struct JSON {
 #[derive(Serialize, Deserialize)]
 struct SelectLayerJson {
     room_id: i32,
-    room_pass: String,
+    room_key: String,
     user_id: i32,
     user_token: u32,
     stream: String,
@@ -61,7 +61,7 @@ async fn create(Path(params): Path<HashMap<String, String>>) -> Result<Response>
 
     let (room, client) = match auth_user(
         json.room_id.clone(),
-        json.room_pass.clone(),
+        json.room_key.clone(),
         json.user_id,
         json.user_token,
     )
@@ -98,7 +98,7 @@ async fn destroy(Path(params): Path<HashMap<String, String>>) -> Result<Response
 
     let (room, client) = match auth_user(
         json.room_id.clone(),
-        json.room_pass.clone(),
+        json.room_key.clone(),
         json.user_id,
         json.user_token,
     )
@@ -135,7 +135,7 @@ async fn get_layer(Path(params): Path<HashMap<String, String>>) -> Result<Respon
 
     let (room, _client) = match auth_user(
         json.room_id.clone(),
-        json.room_pass.clone(),
+        json.room_key.clone(),
         json.user_id,
         json.user_token,
     )
@@ -167,7 +167,7 @@ async fn select_layer(Path(params): Path<HashMap<String, String>>) -> Result<Res
 
     let (room, _client) = match auth_user(
         json.room_id.clone(),
-        json.room_pass.clone(),
+        json.room_key.clone(),
         json.user_id,
         json.user_token,
     )
@@ -202,7 +202,7 @@ async fn un_select_layer(Path(params): Path<HashMap<String, String>>) -> Result<
 
     let (room, _client) = match auth_user(
         json.room_id.clone(),
-        json.room_pass.clone(),
+        json.room_key.clone(),
         json.user_id,
         json.user_token,
     )

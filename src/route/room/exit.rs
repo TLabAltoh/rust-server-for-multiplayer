@@ -23,7 +23,7 @@ pub fn route() -> Router<AppState> {
 #[derive(Serialize, Deserialize)]
 struct JSON {
     room_id: i32,
-    room_pass: String,
+    room_key: String,
     user_id: i32,
     user_token: u32,
 }
@@ -46,7 +46,7 @@ async fn room_exit(Path(params): Path<HashMap<String, String>>) -> Result<Respon
     }
 
     let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
-    if !room.check_password(json.room_pass.clone()) {
+    if !room.auth_room_key(json.room_key.clone()) {
         return Ok(http::create_response(
             Body::from(BodyUtil::INVILED_PASSWORD),
             StatusCode::NOT_ACCEPTABLE,

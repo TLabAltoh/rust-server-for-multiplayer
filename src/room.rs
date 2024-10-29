@@ -23,7 +23,7 @@ pub struct Room {
 
     client_map: Arc<RwLock<HashMap<i32, Client>>>,
 
-    password_hash: u32,
+    room_key_hash: u32,
     master_key_hash: u32,
 
     description: String,
@@ -39,7 +39,7 @@ impl Room {
         needs_host: bool,
         is_public: bool,
         capacity: u32,
-        password: String,
+        room_key: String,
         master_key: String,
         description: String,
         config: Config,
@@ -61,7 +61,7 @@ impl Room {
 
             client_map: client_map,
 
-            password_hash: utils::unique::hash_from_string(password),
+            room_key_hash: utils::unique::hash_from_string(room_key),
             master_key_hash: utils::unique::hash_from_string(master_key),
 
             description: description,
@@ -117,13 +117,13 @@ impl Room {
         }
     }
 
-    pub fn check_password(&self, pass: String) -> bool {
-        let hash = utils::unique::hash_from_string(pass);
+    pub fn auth_room_key(&self, key: String) -> bool {
+        let hash = utils::unique::hash_from_string(key);
 
-        self.password_hash == hash
+        self.room_key_hash == hash
     }
 
-    pub fn check_master_key(&self, key: String) -> bool {
+    pub fn auth_master_key(&self, key: String) -> bool {
         let hash = utils::unique::hash_from_string(key);
 
         self.master_key_hash == hash
@@ -198,7 +198,7 @@ impl Room {
 
         if self.needs_host {
             if master_key != "" {
-                if !self.check_master_key(master_key) || clients.contains_key(&0) {
+                if !self.auth_master_key(master_key) || clients.contains_key(&0) {
                     return Ok(false);
                 }
                 *user_id = 0;

@@ -19,7 +19,7 @@ use crate::AppState;
 #[derive(Serialize, Deserialize)]
 struct JSON {
     room_id: i32,
-    room_pass: String,
+    room_key: String,
     user_id: i32,
     user_token: u32,
 }
@@ -38,7 +38,7 @@ async fn infos(Path(params): Path<HashMap<String, String>>) -> Result<Response> 
 
     let (room, client) = match auth_user(
         json.room_id.clone(),
-        json.room_pass.clone(),
+        json.room_key.clone(),
         json.user_id,
         json.user_token,
     )

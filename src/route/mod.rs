@@ -60,7 +60,7 @@ where
 
 pub async fn auth_user(
     room_id: i32,
-    room_pass: String,
+    room_key: String,
     user_id: i32,
     user_token: u32,
 ) -> Result<(Room, Client), Response> {
@@ -74,7 +74,7 @@ pub async fn auth_user(
     }
 
     let room: &mut Room = rooms.get_mut(&room_id).unwrap();
-    if !room.check_password(room_pass.clone()) {
+    if !room.auth_room_key(room_key.clone()) {
         return Err(http::create_response(
             Body::from(BodyUtil::INVILED_PASSWORD),
             StatusCode::NOT_ACCEPTABLE,
