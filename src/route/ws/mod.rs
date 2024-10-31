@@ -198,7 +198,7 @@ async fn stream(
             let _ = group_manager.leave_group(stream.clone(), id).await;
             drop(group_manager);
 
-            println!("[ws] connection closed");
+            info!("[ws] connection closed");
         })
     }));
 }
