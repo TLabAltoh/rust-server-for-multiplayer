@@ -8,3 +8,4 @@ keywords = ["axum", "axum-ws"]
 
 [dependencies]
 tokio = { version = "1", features = ["rt", "sync", "macros"] }
+tracing = "0.1.40"

@@ -57,7 +57,7 @@ async fn stream(
 
             let mut rooms = ROOMS.lock().await;
             if !rooms.contains_key(&json.room_id) {
-                error!("room does not exist");
+                error!("[ws] room does not exist");
             }
 
             let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
@@ -110,6 +110,7 @@ async fn stream(
                         // Maybe stream has been closed
                         return;
                     }
+                    debug!("[ws] forwarding message ...");
                 }
             });
 
@@ -126,7 +127,7 @@ async fn stream(
                     dummy_buf[i] = (id >> (i * 8)) as u8;
                 }
                 if let Err(err) = group_sender.send([header.clone(), dummy_buf.clone()].concat()) {
-                    info!("send socket err: {}", err);
+                    info!("[ws] send socket err: {}", err);
                     return;
                 }
 
@@ -138,18 +139,18 @@ async fn stream(
                         // byte array in the message receive callback. So this
                         // server only uses binary for WebSocket.
                         Message::Binary(binary) => {
-                            debug!("received binary message: {:?}", &binary);
+                            debug!("[ws] received binary message: {:?}", &binary);
                             let is_broadcast = header[1..5] == binary[..4];
                             if is_broadcast {
-                                debug!("send broadcast message");
-                                if let Err(err) =
-                                    group_sender.send([header.clone(), binary].concat())
+                                debug!("[ws] send broadcast message");
+                                if let Err(err) = 
+                                group_sender.send([header.clone(), binary].concat())
                                 {
-                                    info!("send socket err: {}", err);
+                                    info!("[ws] send socket err: {}", err);
                                     return;
                                 }
                             } else {
-                                debug!("send unicast message");
+                                debug!("[ws] send unicast message");
                                 let to = u32::from_be_bytes([
                                     binary[3], binary[2], binary[1], binary[0],
                                 ]);
@@ -158,7 +159,7 @@ async fn stream(
                                     if let Err(err) =
                                         user_sender.send([header.clone(), binary].concat())
                                     {
-                                        info!("send socket err: {}", err);
+                                        info!("[ws] send socket err: {}", err);
                                         return;
                                     }
                                 }
@@ -167,20 +168,13 @@ async fn stream(
                         }
                         Message::Text(text) => {
                             warn!(
-                                "received text message. this message will not be processed.: {}",
+                                "[ws] received text message. this message will not be processed.: {}",
                                 text
                             );
                         }
                         Message::Ping(_vec) => {}
                         Message::Pong(_vec) => {}
                         Message::Close(_close_frame) => {
-                            header[0] = 2; // close
-                            if let Err(err) =
-                                group_sender.send([header.clone(), dummy_buf.clone()].concat())
-                            {
-                                info!("send socket err: {}", err);
-                                return;
-                            }
                         }
                     }
                 }

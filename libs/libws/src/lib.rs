@@ -17,6 +17,8 @@ use tokio::{
     task::JoinHandle,
 };
 
+use tracing::debug;
+
 pub struct Group {
     pub name: String,
     tx: broadcast::Sender<Vec<u8>>,
@@ -127,6 +129,21 @@ impl Group {
         let mut user_senders = self.user_senders.write().unwrap();
         if let Some(_user_sender) = user_senders.get(&user) {
             user_senders.remove(&user);
+        }
+
+        let mut header = vec![0u8; 5]; // typ (1) + from (0 ~ 3) + to (4 ~ 7)
+        for i in 0..4 {
+            header[i + 1] = (user >> (i * 8)) as u8;
+        }
+
+        header[0] = 2; // close
+        let mut dummy_buf = vec![0u8; 4];
+        for i in 0..4 {
+            dummy_buf[i] = (user >> (i * 8)) as u8;
+        }
+
+        if let Err(err) = self.tx.send([header.clone(), dummy_buf.clone()].concat()) {
+            debug!("[ws] send socket err: {}", err);
         }
     }
 
