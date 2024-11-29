@@ -17,7 +17,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub struct Group {
     pub name: String,
@@ -115,6 +115,12 @@ impl Group {
 
     pub async fn leave(&self, user: u32) {
         let mut inner = self.inner_user.lock().await;
+
+        if !inner.contains(&user) {
+            // user has aready leaved ...
+            return;
+        }
+
         if let Some(pos) = inner.iter().position(|x| *x == user) {
             inner.swap_remove(pos);
             self.user_count.fetch_sub(1, Ordering::SeqCst);
@@ -272,20 +278,21 @@ impl GroupsManager {
     }
 
     pub async fn end_user(&self, user: u32) {
-        let groups = self.inner.lock().await;
+        let mut group_names = Vec::<String>::new();
         let mut users_group = self.users_group.lock().await;
         match users_group.entry(user.clone()) {
             std::collections::hash_map::Entry::Occupied(o) => {
-                let group_names = o.get();
-                for group_name in group_names {
-                    let group = groups.get(group_name);
-                    if let Some(group) = group {
-                        group.leave(user.clone()).await;
-                    }
-                }
+                group_names = o.get().clone();
                 o.remove();
             }
             std::collections::hash_map::Entry::Vacant(_) => {}
+        }
+        drop(users_group);
+
+        for group_name in group_names {
+            if let Err(err) = self.leave_group(group_name.clone(), user).await {
+                warn!("end_user filed ! {}", err);
+            }
         }
     }
 
@@ -342,14 +349,13 @@ impl GroupsManager {
 
     pub async fn leave_group(&self, name: String, user: u32) -> Result<(), GroupError> {
         let groups = self.inner.lock().await;
-        let mut users_group = self.users_group.lock().await;
-
         groups
             .get(&name)
             .ok_or(GroupError::GroupNotFound)?
             .leave(user.clone())
             .await;
 
+        let mut users_group = self.users_group.lock().await;
         match users_group.entry(user.clone()) {
             std::collections::hash_map::Entry::Occupied(mut o) => {
                 let vecotr = o.get_mut();
