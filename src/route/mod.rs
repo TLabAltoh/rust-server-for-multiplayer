@@ -28,16 +28,13 @@ pub fn parse_base64_into_json<T>(params: &HashMap<String, String>) -> Result<T, 
 where
     T: DeserializeOwned + Serialize,
 {
-    if !params.contains_key("json_base64") {
-        let mut body = String::default();
-        body.push_str("Missing JSON");
-
+    if !params.contains_key("base64") {
         return Err(http::create_response(
-            Body::from(body),
+            Body::from("Missing Params".to_string()),
             StatusCode::NOT_ACCEPTABLE,
         ));
     }
-    let json_obj = match BASE64_STANDARD.decode(params.get("json_base64").unwrap()) {
+    let json_obj = match BASE64_STANDARD.decode(params.get("base64").unwrap()) {
         Ok(json_obj) => json_obj,
         Err(err) => {
             return Err(http::create_response(

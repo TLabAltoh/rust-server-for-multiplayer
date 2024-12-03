@@ -17,7 +17,7 @@ use crate::route::*;
 use crate::ROOMS;
 
 pub fn route() -> Router<AppState> {
-    Router::new().route("/room/join/:json_base64/", post(room_join))
+    Router::new().route("/room/join/:base64/", post(room_join))
 }
 
 #[derive(Serialize, Deserialize)]

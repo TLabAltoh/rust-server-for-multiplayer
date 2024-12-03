@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<link rel="stylesheet" type="text/css" href="/styles.css" />
+	<!-- <link rel="stylesheet" type="text/css" href="/assets/webui/styles.css" /> -->
+
+	<!-- icon -->
+	<link rel="apple-touch-icon" href="https://imgur.com/qbtnxAZ.png" sizes="180x180">
+	<link rel="icon" type="image/png" href="https://imgur.com/gmfx8ZI.png" sizes="192x192">
+	<!-- icon -->
+
+	<script src="js/sfu-client.js"></script>
+	<script src="js/webrtc-sfu.js"></script>
+	<script src="js/ws-sfu.js"></script>
+	<script src="js/script.js"></script>
+	<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+	<title>WebRTC-Chat-SFU</title>
+</head>
+
+<body>
+	<h1>Unity-Rust-SFU</h1>
+
+	<h2>Hello There</h2>
+	<h3>
+		This is an SFU server for relaying
+		<a href="https://webrtc.org/?hl=en">WebRTC</a>
+		and
+		<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API">WebSocket</a>
+		packets. Intended for use in a realtime multiplayer game.
+		This repository's webrtc implementation is mostly based on
+		<a href="https://github.com/binbat">binbat</a>'s
+		<a href="https://github.com/binbat/live777">live777</a> and
+		<a href="https://github.com/webrtc-rs/webrtc">webrtc-rs</a>.
+	</h3>
+	<hr>
+
+	<h2>Debug Tool</h2>
+
+	<div class="wrap">
+		<div class="scroll">
+			<template id="auth">
+				<tr>
+					<th><label>Room ID</label></th>
+					<td><input type="number" name="room_id"><br></td>
+				</tr>
+
+				<tr>
+					<th><label>Room Key</label></th>
+					<td><input type="text" name="room_key" value="password"><br></td>
+				</tr>
+
+				<tr>
+					<th><label>User ID</label></th>
+					<td><input type="number" name="user_id"><br></td>
+				</tr>
+
+				<tr>
+					<th><label>User Token</label></th>
+					<td><input type="number" name="user_token"><br></td>
+				</tr>
+			</template>
+
+			<details open="true">
+				<summary>Room</summary>
+				<details open="true">
+					<summary>Info</summary>
+					<form id="room" action="room" method="post">
+						<table>
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Key</label></th>
+								<td><input type="text" name="room_key" value="password"><br></td>
+							</tr>
+						</table>
+					</form>
+					<input type="submit" form="room" value="show room info">
+					<input type="button" onclick="post('/room')" , value="enum rooms">
+				</details>
+
+				<details open="true">
+					<summary>Join</summary>
+					<form id="room/join" action="room/join" method="post">
+						<table>
+							<tr>
+								<th><label>User Name</label></th>
+								<td><input type="text" name="user_name" value="default"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Key</label></th>
+								<td><input type="text" name="room_key" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Master Key</label></th>
+								<td><input type="text" name="master_key" value="password"><br></td>
+							</tr>
+						</table>
+
+						<input type="submit" value="join room">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>Exit</summary>
+					<form id="room/exit" action="room/exit" method="post">
+						<table>
+							<div id="auth_container"></div>
+						</table>
+						<input type="submit" value="exit room">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>Create</summary>
+					<form id="room/create" action="room/create" method="post">
+						<table>
+							<tr>
+								<th><label>Room Name</label></th>
+								<td><input type="text" name="room_name" value="default"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Room Capacity</label></th>
+								<td><input type="number" name="room_capacity" value=2><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Needs Host</label></th>
+								<td>
+									<input type="radio" name="needs_host" value=true>yes
+									<input type="radio" name="needs_host" value=false checked>no
+								</td>
+							</tr>
+
+							<tr>
+								<th><label>Is Public</label></th>
+								<td>
+									<input type="radio" name="is_public" value=true>yes
+									<input type="radio" name="is_public" value=false checked>no
+								</td>
+							</tr>
+
+							<tr>
+								<th><label>Room Key</label></th>
+								<td><input type="text" name="room_key" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Master Key</label></th>
+								<td><input type="text" name="master_key" value="password"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Description (Option)</label></th>
+								<td><input type="text" name="description" value="description"><br></td>
+							</tr>
+						</table>
+					</form>
+					<input type="submit" form="room/create" value="create room">
+					<input type="button" onclick="createClient();" value="create client">
+				</details>
+
+				<details open="true">
+					<summary>Delete</summary>
+					<form id="room/delete" action="room/delete" method="post">
+						<table>
+							<tr>
+								<th><label>Room ID</label></th>
+								<td><input type="number" name="room_id"><br></td>
+							</tr>
+
+							<tr>
+								<th><label>Master Key</label></th>
+								<td><input type="text" name="master_key" value="password"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="delete room">
+					</form>
+				</details>
+			</details>
+
+			<details open="true">
+				<summary>WHIP</summary>
+				<details open="true">
+					<summary>Publish</summary>
+					<form id="stream/whip" action="stream/whip" method="post">
+						<table id="auth_container">
+							<tr>
+								<th><label>Stream</label></th>
+								<td><input type="text" name="stream" value="default"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="publish">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>DataChannel</summary>
+					<form id="send_rtc_message_publish" action="send_rtc_message" method="post">
+						<table>
+							<tr>
+								<th><label>To</label></th>
+								<td><input type="number" name="to"><br></td>
+							</tr>
+							<tr>
+								<th><label>Message</label></th>
+								<td><input type="text" name="sender_message"><br></td>
+							</tr>
+						</table>
+
+						<input type="submit" value="send message">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>MediaTrack</summary>
+					<details open="true">
+						<summary>Audio</summary>
+						<div>
+							<audio id="audio_send" src="media/sample-audio.mp3" controls loop></audio>
+						</div>
+						<div><canvas id="whip_audio_canvas"></canvas></div>
+					</details>
+					<details open="true">
+						<summary>Video</summary>
+						<div>
+							<video id="video" height="128" playsinline controls loop>
+								<source src="media/sample-video.mp4" type="video/mp4" />
+							</video>
+						</div>
+					</details>
+					<div>
+						<button onclick="(function(){peerConnection.pause();})()">Pause</button>
+						<button onclick="(function(){peerConnection.resume();})()">Resume</button>
+
+						<select onchange="(function() {
+							const selector = document.getElementById('bandwidth');
+							const bandwidth = selector.options[selector.selectedIndex].value;
+							peerConnection.setBandwidth(bandwidth);
+						})()" id="bandwidth">
+							<option value="unlimited" selected>unlimited</option>
+							<option value="2000">2000</option>
+							<option value="1000">1000</option>
+							<option value="500">500</option>
+							<option value="250">250</option>
+							<option value="125">125</option>
+							<option value="75">75</option>
+						</select>
+						kbps
+					</div>
+				</details>
+			</details>
+
+			<details open="true">
+				<summary>WHEP</summary>
+				<details open="true">
+					<summary>Subscribe</summary>
+					<form id="stream/whep" action="stream/whep" method="post">
+						<table id="auth_container">
+							<tr>
+								<th><label>Stream</label></th>
+								<td><input type="text" name="stream" value="default"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="subscribe">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>DataChannel</summary>
+					<form id="send_rtc_message_subscribe" action="send_rtc_message" method="post">
+						<table>
+							<tr>
+								<th><label>To</label></th>
+								<td><input type="number" name="to"><br></td>
+							</tr>
+							<tr>
+								<th><label>Message</label></th>
+								<td><input type="text" name="sender_message"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="send message">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>MediaTrack</summary>
+					<div><audio id="audio_recv" autoplay controls></audio></div>
+					<div><canvas id="whep_audio_canvas"></canvas></div>
+					<div><video id="video_recv" height="128" autoplay controls></video></div>
+				</details>
+			</details>
+
+			<details open="true">
+				<summary>WebSocket</summary>
+				<details open="true">
+					<summary>Join</summary>
+					<form id="ws/connect" action="ws/connect" method="post">
+						<table id="auth_container">
+							<tr>
+								<th><label>Stream</label></th>
+								<td><input type="text" name="stream" value="default"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="join group">
+					</form>
+				</details>
+
+				<details open="true">
+					<summary>Socket</summary>
+					<form id="send_ws_message" action="send_ws_message" method="post">
+						<table>
+							<tr>
+								<th><label>To</label></th>
+								<td><input type="number" name="to"><br></td>
+							</tr>
+							<tr>
+								<th><label>Message</label></th>
+								<td><input type="text" name="sender_message"><br></td>
+							</tr>
+						</table>
+						<input type="submit" value="send message">
+					</form>
+				</details>
+			</details>
+
+			<script>
+				var template = document.getElementById("auth");
+				document.querySelectorAll("#auth_container").forEach((elem) => {
+					var clone = template.content.cloneNode(true);
+					elem.insertBefore(clone, elem.firstElementChild)
+				});
+			</script>
+		</div>
+	</div>
+</body>
+
+</html>

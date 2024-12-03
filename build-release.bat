@@ -1,5 +1,5 @@
 cargo build --release
 
-rm -rf target/release/assets
+rm -rf target/release/assets/webui
 
-cp -r assets target/release/
+cp -r assets/webui target/release/

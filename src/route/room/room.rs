@@ -20,7 +20,7 @@ use crate::ROOMS;
 pub fn route() -> Router<AppState> {
     Router::new()
         .route("/room", post(room))
-        .merge(Router::new().route("/room/:json_base64/", post(room_specific)))
+        .merge(Router::new().route("/room/:base64/", post(room_specific)))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -49,8 +49,7 @@ async fn room() -> Result<Response> {
         }
     }
 
-    let mut body = String::default();
-    body.push_str(&serde_json::to_string(&json).unwrap());
+    let body = serde_json::to_string(&json).unwrap();
 
     return Ok(http::create_response(Body::from(body), StatusCode::OK));
 }

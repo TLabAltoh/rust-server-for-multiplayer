@@ -11,14 +11,15 @@ use {
 
 #[cfg(not(debug_assertions))]
 #[derive(RustEmbed)]
-#[folder = "assets/"]
+#[folder = "assets/webui/"]
 struct Assets;
 
 pub fn static_server(router: Router) -> Router {
     #[cfg(debug_assertions)]
     {
-        let serve_dir =
-            ServeDir::new("assets").not_found_service(ServeFile::new("assets/index.html"));
+        let serve_dir = ServeDir::new("assets/webui")
+            .not_found_service(ServeFile::new("assets/webui/debug-tool.html"));
+
         router.nest_service("/", serve_dir.clone())
     }
     #[cfg(not(debug_assertions))]
@@ -31,7 +32,7 @@ pub fn static_server(router: Router) -> Router {
 async fn static_handler(uri: Uri) -> impl IntoResponse {
     let mut path = uri.path().trim_start_matches('/');
     if path.is_empty() {
-        path = "index.html";
+        path = "debug-tool.html";
     }
     match Assets::get(path) {
         Some(content) => {

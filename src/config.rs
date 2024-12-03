@@ -17,13 +17,9 @@ pub struct Config {
     #[serde(default)]
     pub auth: Auth,
     #[serde(default)]
-    pub admin_auth: Auth,
-    #[serde(default)]
     pub log: Log,
     #[serde(default)]
     pub stream_info: StreamInfo,
-    #[serde(default)]
-    pub webhooks: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -254,11 +250,6 @@ impl Config {
     }
 
     fn validate(&self) -> anyhow::Result<()> {
-        if (!self.auth.accounts.is_empty() || !self.auth.tokens.is_empty())
-            && (self.admin_auth.accounts.is_empty() && self.admin_auth.tokens.is_empty())
-        {
-            return Err(anyhow::anyhow!("auth not empty,but admin auth empty"));
-        }
         if self.stream_info.pub_max.0 == 0 {
             return Err(anyhow::anyhow!("stream_info.pub_max cannot be equal to 0"));
         }

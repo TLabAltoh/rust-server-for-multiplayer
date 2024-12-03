@@ -23,7 +23,7 @@ struct JSON {
 }
 
 pub fn route() -> Router<AppState> {
-    Router::new().route("/room/delete/:json_base64/", post(delete_room))
+    Router::new().route("/room/delete/:base64/", post(delete_room))
 }
 
 async fn delete_room(Path(params): Path<HashMap<String, String>>) -> Result<Response> {

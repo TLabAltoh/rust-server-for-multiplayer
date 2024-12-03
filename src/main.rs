@@ -11,6 +11,7 @@ use clap::{command, Parser};
 
 use http_body_util::BodyExt;
 use room::Room;
+use route::r#static::static_server;
 use std::collections::HashMap;
 use std::future::IntoFuture;
 use tokio::sync::Mutex;
@@ -22,7 +23,6 @@ use tracing::{debug, error, info, info_span, warn};
 use crate::auth::ManyValidate;
 use crate::config::Config;
 use crate::result::Result;
-use crate::route::r#static::static_server;
 use crate::route::AppState;
 
 mod auth;
@@ -113,10 +113,7 @@ async fn main() -> Result<()> {
     let app_state = AppState {
         config: cfg.clone(),
     };
-    let auth_layer = ValidateRequestHeaderLayer::custom(ManyValidate::new(vec![
-        cfg.auth,
-        cfg.admin_auth.clone(),
-    ]));
+    let auth_layer = ValidateRequestHeaderLayer::custom(ManyValidate::new(vec![cfg.auth]));
     let app = Router::new()
         .merge(
             route::room::room::route()

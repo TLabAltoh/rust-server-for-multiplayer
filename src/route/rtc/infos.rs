@@ -25,7 +25,7 @@ struct JSON {
 }
 
 pub fn route() -> Router<AppState> {
-    Router::new().route("/stream/infos/:json_base64/", post(infos))
+    Router::new().route("/stream/infos/:base64/", post(infos))
 }
 
 async fn infos(Path(params): Path<HashMap<String, String>>) -> Result<Response> {

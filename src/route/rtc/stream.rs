@@ -21,12 +21,12 @@ use crate::route::*;
 
 pub fn route() -> Router<AppState> {
     Router::new()
-        .route("/stream/create/:json_base64/", post(create))
-        .merge(Router::new().route("/stream/destroy/:json_base64/", post(destroy)))
-        .merge(Router::new().route("/stream/get_layer/:json_base64/", post(get_layer)))
-        .merge(Router::new().route("/stream/select_layer/:json_base64/", post(select_layer)))
+        .route("/stream/create/:base64/", post(create))
+        .merge(Router::new().route("/stream/destroy/:base64/", post(destroy)))
+        .merge(Router::new().route("/stream/get_layer/:base64/", post(get_layer)))
+        .merge(Router::new().route("/stream/select_layer/:base64/", post(select_layer)))
         .merge(Router::new().route(
-            "/stream/un_select_layer/:json_base64/",
+            "/stream/un_select_layer/:base64/",
             post(un_select_layer),
         ))
 }

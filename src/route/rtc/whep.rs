@@ -2,7 +2,7 @@ use axum::extract::ws;
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::extract::Path;
 use axum::response::Response;
-use axum::routing::get;
+use axum::routing::post;
 use axum::Router;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
@@ -21,7 +21,7 @@ use crate::route::*;
 use crate::ROOMS;
 
 pub fn route() -> Router<AppState> {
-    Router::new().route("/stream/whep/:json_base64/", get(whep))
+    Router::new().route("/stream/whep/:base64/", post(whep))
 }
 
 #[derive(Serialize, Deserialize)]

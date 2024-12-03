@@ -1,5 +1,5 @@
 cargo build
 
-rm -rf target/debug/assets
+rm -rf target/debug/assets/webui
 
-cp -r assets target/debug/
+cp -r assets/webui target/debug/
