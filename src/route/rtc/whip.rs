@@ -2,7 +2,7 @@ use axum::extract::ws;
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::extract::Path;
 use axum::response::Response;
-use axum::routing::post;
+use axum::routing::get;
 use axum::Router;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
@@ -20,7 +20,7 @@ use crate::route::*;
 use crate::ROOMS;
 
 pub fn route() -> Router<AppState> {
-    Router::new().route("/stream/whip/:base64/", post(whip))
+    Router::new().route("/stream/whip/:base64/", get(whip))
 }
 
 #[derive(Serialize, Deserialize)]
