@@ -49,18 +49,18 @@
 				</tr>
 
 				<tr>
-					<th><label>Room Key</label></th>
-					<td><input type="text" name="room_key" value="password"><br></td>
-				</tr>
-
-				<tr>
 					<th><label>User ID</label></th>
 					<td><input type="number" name="user_id"><br></td>
 				</tr>
 
 				<tr>
-					<th><label>User Token</label></th>
-					<td><input type="number" name="user_token"><br></td>
+					<th><label>Token</label></th>
+					<td><input type="number" name="token"><br></td>
+				</tr>
+
+				<tr>
+					<th><label>Shared Key</label></th>
+					<td><input type="text" name="shared_key" value="password"><br></td>
 				</tr>
 			</template>
 
@@ -71,13 +71,13 @@
 					<form id="room" action="room" method="post">
 						<table>
 							<tr>
-								<th><label>Room ID</label></th>
-								<td><input type="number" name="room_id"><br></td>
+								<th><label>ID</label></th>
+								<td><input type="number" name="id"><br></td>
 							</tr>
 
 							<tr>
-								<th><label>Room Key</label></th>
-								<td><input type="text" name="room_key" value="password"><br></td>
+								<th><label>Shared Key</label></th>
+								<td><input type="text" name="shared_key" value="password"><br></td>
 							</tr>
 						</table>
 					</form>
@@ -90,18 +90,18 @@
 					<form id="room/join" action="room/join" method="post">
 						<table>
 							<tr>
-								<th><label>User Name</label></th>
-								<td><input type="text" name="user_name" value="default"><br></td>
+								<th><label>Name</label></th>
+								<td><input type="text" name="name" value="default"><br></td>
 							</tr>
 
 							<tr>
-								<th><label>Room ID</label></th>
-								<td><input type="number" name="room_id"><br></td>
+								<th><label>ID</label></th>
+								<td><input type="number" name="id"><br></td>
 							</tr>
 
 							<tr>
-								<th><label>Room Key</label></th>
-								<td><input type="text" name="room_key" value="password"><br></td>
+								<th><label>Shared Key</label></th>
+								<td><input type="text" name="shared_key" value="password"><br></td>
 							</tr>
 
 							<tr>
@@ -129,13 +129,13 @@
 					<form id="room/create" action="room/create" method="post">
 						<table>
 							<tr>
-								<th><label>Room Name</label></th>
-								<td><input type="text" name="room_name" value="default"><br></td>
+								<th><label>Name</label></th>
+								<td><input type="text" name="name" value="default"><br></td>
 							</tr>
 
 							<tr>
-								<th><label>Room Capacity</label></th>
-								<td><input type="number" name="room_capacity" value=2><br></td>
+								<th><label>Capacity</label></th>
+								<td><input type="number" name="capacity" value=2><br></td>
 							</tr>
 
 							<tr>
@@ -155,8 +155,8 @@
 							</tr>
 
 							<tr>
-								<th><label>Room Key</label></th>
-								<td><input type="text" name="room_key" value="password"><br></td>
+								<th><label>Shared Key</label></th>
+								<td><input type="text" name="shared_key" value="password"><br></td>
 							</tr>
 
 							<tr>
@@ -179,8 +179,8 @@
 					<form id="room/delete" action="room/delete" method="post">
 						<table>
 							<tr>
-								<th><label>Room ID</label></th>
-								<td><input type="number" name="room_id"><br></td>
+								<th><label>ID</label></th>
+								<td><input type="number" name="id"><br></td>
 							</tr>
 
 							<tr>

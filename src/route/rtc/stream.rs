@@ -25,45 +25,42 @@ pub fn route() -> Router<AppState> {
         .merge(Router::new().route("/stream/destroy/:base64/", post(destroy)))
         .merge(Router::new().route("/stream/get_layer/:base64/", post(get_layer)))
         .merge(Router::new().route("/stream/select_layer/:base64/", post(select_layer)))
-        .merge(Router::new().route(
-            "/stream/un_select_layer/:base64/",
-            post(un_select_layer),
-        ))
+        .merge(Router::new().route("/stream/un_select_layer/:base64/", post(un_select_layer)))
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
+struct RequestJson {
     room_id: i32,
-    room_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
     stream: String,
+    shared_key: String,
 }
 
 #[derive(Serialize, Deserialize)]
 struct SelectLayerJson {
     room_id: i32,
-    room_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
     stream: String,
     session: String,
     layer: String,
+    shared_key: String,
 }
 
 async fn create(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /stream/create");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (room, client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -73,10 +70,10 @@ async fn create(Path(params): Path<HashMap<String, String>>) -> Result<Response>
 
     let forwarder = room.forwarder();
     let forwarder = forwarder.write().await;
-    let _ = match forwarder.stream_create(json.stream.clone()).await {
+    let _ = match forwarder.stream_create(request.stream.clone()).await {
         Ok(_) => {
             let mut client = client;
-            client.add_stream(json.stream.clone()).await?;
+            client.add_stream(request.stream.clone()).await?;
 
             Ok(Response::builder()
                 .status(StatusCode::NO_CONTENT)
@@ -91,16 +88,16 @@ async fn create(Path(params): Path<HashMap<String, String>>) -> Result<Response>
 async fn destroy(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /stream/destroy");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (room, client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -110,10 +107,10 @@ async fn destroy(Path(params): Path<HashMap<String, String>>) -> Result<Response
 
     let forwarder = room.forwarder();
     let forwarder = forwarder.write().await;
-    let _ = match forwarder.stream_delete(json.stream.clone()).await {
+    let _ = match forwarder.stream_delete(request.stream.clone()).await {
         Ok(_) => {
             let mut client = client;
-            client.remove_stream(json.stream.clone()).await?;
+            client.remove_stream(request.stream.clone()).await?;
 
             Ok(Response::builder()
                 .status(StatusCode::NO_CONTENT)
@@ -128,16 +125,16 @@ async fn destroy(Path(params): Path<HashMap<String, String>>) -> Result<Response
 async fn get_layer(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /stream/get_layer");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (room, _client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -148,7 +145,7 @@ async fn get_layer(Path(params): Path<HashMap<String, String>>) -> Result<Respon
     let forwarder = room.forwarder();
     let forwarder = forwarder.write().await;
     let layers: Vec<http::response::Layer> = forwarder
-        .layers(json.stream.clone())
+        .layers(request.stream.clone())
         .await?
         .into_iter()
         .map(|layer| layer.into())
@@ -160,16 +157,16 @@ async fn get_layer(Path(params): Path<HashMap<String, String>>) -> Result<Respon
 async fn select_layer(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /stream/select_layer");
 
-    let json: SelectLayerJson = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: SelectLayerJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (room, _client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -181,10 +178,10 @@ async fn select_layer(Path(params): Path<HashMap<String, String>>) -> Result<Res
     let forwarder = forwarder.write().await;
     forwarder
         .select_layer(
-            json.stream.clone(),
-            json.session.clone(),
+            request.stream.clone(),
+            request.session.clone(),
             Some(Layer {
-                encoding_id: json.layer.clone(),
+                encoding_id: request.layer.clone(),
             }),
         )
         .await?;
@@ -195,16 +192,16 @@ async fn select_layer(Path(params): Path<HashMap<String, String>>) -> Result<Res
 async fn un_select_layer(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /stream/un_select_layer");
 
-    let json: SelectLayerJson = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: SelectLayerJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (room, _client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -216,8 +213,8 @@ async fn un_select_layer(Path(params): Path<HashMap<String, String>>) -> Result<
     let forwarder = forwarder.write().await;
     forwarder
         .select_layer(
-            json.stream.clone(),
-            json.session.clone(),
+            request.stream.clone(),
+            request.session.clone(),
             Some(Layer {
                 encoding_id: constant::RID_DISABLE.to_string(),
             }),

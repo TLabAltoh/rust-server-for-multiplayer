@@ -25,17 +25,17 @@ pub fn route() -> Router<AppState> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
+struct RequestJson {
     room_id: i32,
-    room_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
     stream: String,
     offer: String,
+    shared_key: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct SIGNALING {
+struct SignalingJson {
     is_candidate: bool,
     sdp: String,
     session: String,
@@ -48,16 +48,16 @@ async fn whep(
 ) -> Result<Response> {
     debug!("HTTP GET /stream/whep");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (room, _client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -67,7 +67,7 @@ async fn whep(
 
     let forwarder = room.forwarder();
     let forwarder = forwarder.write().await;
-    if !forwarder.is_stream_exists(json.stream.clone()).await? {
+    if !forwarder.is_stream_exists(request.stream.clone()).await? {
         let (tx0, mut rx) = mpsc::channel::<(u8, String)>(32);
         let tx1 = tx0.clone();
         let caches0: Arc<RwLock<Vec<String>>> = Default::default();
@@ -95,7 +95,7 @@ async fn whep(
         });
         let (peer0, sdp, _session) = forwarder
             .virtual_publish(
-                json.stream.clone(),
+                request.stream.clone(),
                 Box::new(move |candidate: Option<RTCIceCandidate>| {
                     let candidate = candidate.clone();
                     let tx0 = tx0.clone();
@@ -109,10 +109,10 @@ async fn whep(
                 }),
             )
             .await?;
-        let id = json.user_id as u32;
+        let id = request.user_id as u32;
         let (peer1, answer, _session) = forwarder
             .publish(
-                json.stream.clone(),
+                request.stream.clone(),
                 id,
                 sdp,
                 Box::new(move |candidate: Option<RTCIceCandidate>| {
@@ -165,18 +165,18 @@ async fn whep(
     }
 
     return Ok(ws.on_upgrade(|mut socket: WebSocket| {
-        let json = json;
+        let request = request;
         Box::pin(async move {
-            let stream = json.stream;
-            let id = json.user_id as u32;
-            let offer = RTCSessionDescription::offer(json.offer).unwrap();
+            let stream = request.stream;
+            let id = request.user_id as u32;
+            let offer = RTCSessionDescription::offer(request.offer).unwrap();
 
             let mut rooms = ROOMS.lock().await;
-            if !rooms.contains_key(&json.room_id) {
+            if !rooms.contains_key(&request.room_id) {
                 error!("room does not exist");
             }
 
-            let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
+            let room: &mut Room = rooms.get_mut(&request.room_id).unwrap();
             let forwarder = room.forwarder();
             let forwarder = forwarder.write().await;
 
@@ -213,7 +213,7 @@ async fn whep(
                 .unwrap();
             drop(forwarder);
 
-            let answer = SIGNALING {
+            let answer = SignalingJson {
                 is_candidate: false,
                 sdp: answer.sdp,
                 session: session,
@@ -232,7 +232,7 @@ async fn whep(
 
             let mut send_task = tokio::spawn(async move {
                 while let Some((peer_connected, candidate)) = rx0.recv().await {
-                    let signaling = SIGNALING {
+                    let signaling = SignalingJson {
                         is_candidate: true,
                         sdp: String::new(),
                         session: String::new(),
@@ -259,11 +259,12 @@ async fn whep(
 
                             debug!("signaling message received: {}", message.clone());
 
-                            let json: SIGNALING = serde_json::from_str(&message.as_str()).unwrap();
+                            let signaling: SignalingJson =
+                                serde_json::from_str(&message.as_str()).unwrap();
 
                             let _ = peer
                                 .add_ice_candidate(RTCIceCandidateInit {
-                                    candidate: json.candidate.clone(),
+                                    candidate: signaling.candidate.clone(),
                                     ..Default::default()
                                 })
                                 .await;

@@ -148,13 +148,13 @@ window.addEventListener('DOMContentLoaded', () => {
                                     break;
                                 case "room/join":
                                     if (response.isJson) {
-                                        ["room/exit", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
-                                            document.getElementById(elem_id).getElementsByName("user_id")[0].setAttribute("value", response.user_id);
-                                            document.getElementById(elem_id).getElementsByName("user_token")[0].setAttribute("value", response.user_token);
+                                        ["send_ws_message", "send_rtc_message_publish", "send_rtc_message_subscribe"].forEach((elem_id) => {
+                                            document.getElementById(elem_id).getElementsByName("to")[0].setAttribute("value", response.id);
                                         });
 
-                                        ["send_ws_message", "send_rtc_message_publish", "send_rtc_message_subscribe"].forEach((elem_id) => {
-                                            document.getElementById(elem_id).getElementsByName("to")[0].setAttribute("value", response.user_id);
+                                        ["room/exit", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
+                                            document.getElementById(elem_id).getElementsByName("user_id")[0].setAttribute("value", response.id);
+                                            document.getElementById(elem_id).getElementsByName("token")[0].setAttribute("value", response.token);
                                         });
                                     }
                                     break;
@@ -162,8 +162,12 @@ window.addEventListener('DOMContentLoaded', () => {
                                     break;
                                 case "room/create":
                                     if (response.isJson) {
-                                        ["room", "room/join", "room/exit", "room/delete", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
-                                            document.getElementById(elem_id).getElementsByName("room_id")[0].setAttribute("value", response.room_id);
+                                        ["room", "room/join", "room/delete"].forEach((elem_id) => {
+                                            document.getElementById(elem_id).getElementsByName("id")[0].setAttribute("value", response.id);
+                                        });
+
+                                        ["room/exit", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
+                                            document.getElementById(elem_id).getElementsByName("room_id")[0].setAttribute("value", response.id);
                                         });
                                     }
                                     break;
@@ -188,7 +192,11 @@ window.addEventListener('DOMContentLoaded', () => {
         document.duplicated = true;
         var room_id = Number(queries["room_id"]);
 
-        ["room", "room/join", "room/exit", "room/delete", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
+        ["room", "room/join", "room/delete"].forEach((elem_id) => {
+            document.getElementById(elem_id).getElementsByName("id")[0].setAttribute("value", room_id);
+        });
+
+        ["room/exit", "stream/whip", "stream/whep", "ws/connect"].forEach((elem_id) => {
             document.getElementById(elem_id).getElementsByName("room_id")[0].setAttribute("value", room_id);
         });
     }

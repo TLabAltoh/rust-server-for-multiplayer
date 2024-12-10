@@ -23,7 +23,7 @@ pub struct Room {
 
     client_map: Arc<RwLock<HashMap<i32, Client>>>,
 
-    room_key_hash: u32,
+    shared_key_hash: u32,
     master_key_hash: u32,
 
     description: String,
@@ -39,7 +39,7 @@ impl Room {
         needs_host: bool,
         is_public: bool,
         capacity: u32,
-        room_key: String,
+        shared_key: String,
         master_key: String,
         description: String,
         config: Config,
@@ -61,7 +61,7 @@ impl Room {
 
             client_map: client_map,
 
-            room_key_hash: utils::unique::hash_from_string(room_key),
+            shared_key_hash: utils::unique::hash_from_string(shared_key),
             master_key_hash: utils::unique::hash_from_string(master_key),
 
             description: description,
@@ -110,17 +110,17 @@ impl Room {
 impl Room {
     pub fn info(&self) -> RoomInfoJson {
         RoomInfoJson {
-            room_id: self.id(),
-            room_name: self.name(),
-            room_capacity: self.capacity(),
+            id: self.id(),
+            name: self.name(),
+            capacity: self.capacity(),
             description: self.description(),
         }
     }
 
-    pub fn auth_room_key(&self, key: String) -> bool {
+    pub fn auth_shared_key(&self, key: String) -> bool {
         let hash = utils::unique::hash_from_string(key);
 
-        self.room_key_hash == hash
+        self.shared_key_hash == hash
     }
 
     pub fn auth_master_key(&self, key: String) -> bool {
@@ -145,7 +145,7 @@ impl Room {
     pub async fn user_delete(
         &mut self,
         user_id: i32,
-        user_token: u32,
+        token: u32,
         check_token: bool,
     ) -> Result<bool> {
         let clients = self.client_map.read().await;
@@ -158,7 +158,7 @@ impl Room {
         drop(group_manager);
 
         if let Some(mut client) = client {
-            if check_token && !client.check_token(user_token.clone()) {
+            if check_token && !client.check_token(token.clone()) {
                 return Ok(false);
             }
 
@@ -179,7 +179,7 @@ impl Room {
         Ok(false)
     }
 
-    async fn _join(&self, user_id: i32, _user_token: u32) -> Result<()> {
+    async fn _join(&self, user_id: i32, _token: u32) -> Result<()> {
         let group_manager = self.group_manager();
         let group_manager = group_manager.write().await;
         group_manager.init_user(user_id as u32).await;
@@ -192,7 +192,7 @@ impl Room {
         user_name: String,
         master_key: String,
         user_id: &mut i32,
-        user_token: &mut u32,
+        token: &mut u32,
     ) -> Result<bool> {
         let mut clients = self.client_map.write().await;
 
@@ -202,7 +202,7 @@ impl Room {
                     return Ok(false);
                 }
                 *user_id = 0;
-                *user_token = utils::unique::generate_unique_u32();
+                *token = utils::unique::generate_unique_u32();
             } else {
                 let mut is_ok = false;
                 for i in 1..self.capacity.try_into().unwrap() {
@@ -211,7 +211,7 @@ impl Room {
                     }
                     is_ok = true;
                     *user_id = i.try_into().unwrap();
-                    *user_token = utils::unique::generate_unique_u32();
+                    *token = utils::unique::generate_unique_u32();
                     break;
                 }
                 if !is_ok {
@@ -226,7 +226,7 @@ impl Room {
                 }
                 is_ok = true;
                 *user_id = i.try_into().unwrap();
-                *user_token = utils::unique::generate_unique_u32();
+                *token = utils::unique::generate_unique_u32();
                 break;
             }
             if !is_ok {
@@ -236,9 +236,9 @@ impl Room {
 
         clients.insert(
             *user_id,
-            Client::new(user_id.clone(), user_token.clone(), user_name.clone()).await?,
+            Client::new(user_id.clone(), token.clone(), user_name.clone()).await?,
         );
-        self._join(user_id.clone(), user_token.clone()).await?;
+        self._join(user_id.clone(), token.clone()).await?;
 
         Ok(true)
     }

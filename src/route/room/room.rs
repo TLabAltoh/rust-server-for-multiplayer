@@ -24,14 +24,14 @@ pub fn route() -> Router<AppState> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
-    room_id: i32,
-    room_key: String,
+struct RequestJson {
+    id: i32,
+    shared_key: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct RESPONSE {
-    room_infos: Vec<RoomInfoJson>,
+struct ResponseJson {
+    infos: Vec<RoomInfoJson>,
 }
 
 async fn room() -> Result<Response> {
@@ -39,54 +39,51 @@ async fn room() -> Result<Response> {
 
     let rooms = ROOMS.lock().await;
 
-    let mut json = RESPONSE {
-        room_infos: Vec::new(),
-    };
+    let mut response = ResponseJson { infos: Vec::new() };
 
     for (_room_id, room) in rooms.iter() {
         if room.is_public() {
-            json.room_infos.push(room.info());
+            response.infos.push(room.info());
         }
     }
 
-    let body = serde_json::to_string(&json).unwrap();
-
-    return Ok(http::create_response(Body::from(body), StatusCode::OK));
+    return Ok(http::create_response(
+        Body::from(serde_json::to_string(&response).unwrap()),
+        StatusCode::OK,
+    ));
 }
 
 async fn room_specific(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     println!("HTTP GET /room");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let mut rooms = ROOMS.lock().await;
 
-    if !rooms.contains_key(&json.room_id) {
+    if !rooms.contains_key(&request.id) {
         return Ok(http::create_response(
             Body::from(BodyUtil::ROOM_ID_NOTFOUND),
             StatusCode::NOT_ACCEPTABLE,
         ));
     }
 
-    let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
-    if !room.auth_room_key(json.room_key.clone()) {
+    let room: &mut Room = rooms.get_mut(&request.id).unwrap();
+    if !room.auth_shared_key(request.shared_key.clone()) {
         return Ok(http::create_response(
             Body::from(BodyUtil::INVILED_PASSWORD),
             StatusCode::NOT_ACCEPTABLE,
         ));
     }
 
-    let mut json = RESPONSE {
-        room_infos: Vec::new(),
-    };
+    let mut response = ResponseJson { infos: Vec::new() };
 
-    json.room_infos.append(&mut vec![room.info()]);
+    response.infos.append(&mut vec![room.info()]);
 
     return Ok(http::create_response(
-        Body::from(serde_json::to_string(&json).unwrap()),
+        Body::from(serde_json::to_string(&response).unwrap()),
         StatusCode::OK,
     ));
 }

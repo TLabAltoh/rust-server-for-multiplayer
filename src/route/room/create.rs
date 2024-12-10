@@ -20,12 +20,12 @@ pub fn route() -> Router<AppState> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
-    room_name: String,
-    room_capacity: u32,
-    room_key: String,
+struct RequestJson {
+    name: String,
+    capacity: u32,
     needs_host: bool,
     is_public: bool,
+    shared_key: String,
     master_key: String,
     description: String,
 }
@@ -36,8 +36,8 @@ async fn create_room(
 ) -> Result<Response> {
     debug!("HTTP GET /room/create");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
@@ -47,17 +47,18 @@ async fn create_room(
 
     let room = Room::new(
         room_id,
-        json.room_name.to_string(),
-        json.needs_host,
-        json.is_public,
-        json.room_capacity,
-        json.room_key,
-        json.master_key,
-        json.description,
+        request.name.to_string(),
+        request.needs_host,
+        request.is_public,
+        request.capacity,
+        request.shared_key,
+        request.master_key,
+        request.description,
         state.config,
     );
 
     let body = serde_json::to_string(&room.info()).unwrap().to_string();
+
     rooms.insert(room_id, room);
 
     return Ok(http::create_response(Body::from(body), StatusCode::OK));

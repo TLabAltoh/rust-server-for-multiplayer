@@ -21,32 +21,32 @@ pub fn route() -> Router<AppState> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
+struct RequestJson {
     room_id: i32,
-    room_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
+    shared_key: String,
 }
 
 async fn room_exit(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /room/exit");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let mut rooms = ROOMS.lock().await;
 
-    if !rooms.contains_key(&json.room_id) {
+    if !rooms.contains_key(&request.room_id) {
         return Ok(http::create_response(
             Body::from(BodyUtil::ROOM_ID_NOTFOUND),
             StatusCode::NOT_ACCEPTABLE,
         ));
     }
 
-    let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
-    if !room.auth_room_key(json.room_key.clone()) {
+    let room: &mut Room = rooms.get_mut(&request.room_id).unwrap();
+    if !room.auth_shared_key(request.shared_key.clone()) {
         return Ok(http::create_response(
             Body::from(BodyUtil::INVILED_PASSWORD),
             StatusCode::NOT_ACCEPTABLE,
@@ -54,7 +54,7 @@ async fn room_exit(Path(params): Path<HashMap<String, String>>) -> Result<Respon
     }
 
     if room
-        .user_delete(json.user_id.clone(), json.user_token.clone(), true)
+        .user_delete(request.user_id.clone(), request.token.clone(), true)
         .await?
     {
         return Ok(http::create_response(

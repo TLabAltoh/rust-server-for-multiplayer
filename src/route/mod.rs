@@ -57,9 +57,9 @@ where
 
 pub async fn auth_user(
     room_id: i32,
-    room_key: String,
+    shared_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
 ) -> Result<(Room, Client), Response> {
     let mut rooms = ROOMS.lock().await;
 
@@ -71,7 +71,7 @@ pub async fn auth_user(
     }
 
     let room: &mut Room = rooms.get_mut(&room_id).unwrap();
-    if !room.auth_room_key(room_key.clone()) {
+    if !room.auth_shared_key(shared_key.clone()) {
         return Err(http::create_response(
             Body::from(BodyUtil::INVILED_PASSWORD),
             StatusCode::NOT_ACCEPTABLE,
@@ -84,7 +84,7 @@ pub async fn auth_user(
     drop(clients);
 
     if let Some(client) = client {
-        if !client.check_token(user_token.clone()) {
+        if !client.check_token(token.clone()) {
             return Err(http::create_response(
                 Body::from(BodyUtil::INVILED_TOKEN),
                 StatusCode::NOT_ACCEPTABLE,

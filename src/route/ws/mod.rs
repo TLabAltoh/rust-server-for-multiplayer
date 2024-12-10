@@ -19,12 +19,12 @@ pub fn route() -> Router<AppState> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
+struct RequestJson {
     room_id: i32,
-    room_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
     stream: String,
+    shared_key: String,
 }
 
 async fn stream(
@@ -33,16 +33,16 @@ async fn stream(
 ) -> Result<Response> {
     debug!("HTTP GET /ws/connect");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (_room, _client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -51,17 +51,17 @@ async fn stream(
     };
 
     return Ok(ws.on_upgrade(|socket: WebSocket| {
-        let json = json;
+        let request = request;
         Box::pin(async move {
-            let stream = json.stream;
-            let id = json.user_id as u32;
+            let stream = request.stream;
+            let id = request.user_id as u32;
 
             let mut rooms = ROOMS.lock().await;
-            if !rooms.contains_key(&json.room_id) {
+            if !rooms.contains_key(&request.room_id) {
                 error!("[ws] room does not exist");
             }
 
-            let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
+            let room: &mut Room = rooms.get_mut(&request.room_id).unwrap();
 
             let (mut socekt_sender, mut socket_receiver) = socket.split();
             let group_manager = room.group_manager();
@@ -111,7 +111,7 @@ async fn stream(
                         // Maybe stream has been closed
                         return;
                     }
-                    debug!("[ws] forwarding message ...");
+                    //debug!("[ws] forwarding message ...");
                 }
             });
 
@@ -140,10 +140,10 @@ async fn stream(
                         // byte array in the message receive callback. So this
                         // server only uses binary for WebSocket.
                         Message::Binary(binary) => {
-                            debug!("[ws] received binary message: {:?}", &binary);
+                            //debug!("[ws] received binary message: {:?}", &binary);
                             let is_broadcast = header[1..5] == binary[..4];
                             if is_broadcast {
-                                debug!("[ws] send broadcast message");
+                                //debug!("[ws] send broadcast message");
                                 if let Err(err) = 
                                 group_sender.send([header.clone(), binary].concat())
                                 {
@@ -151,7 +151,7 @@ async fn stream(
                                     return;
                                 }
                             } else {
-                                debug!("[ws] send unicast message");
+                                //debug!("[ws] send unicast message");
                                 let to = u32::from_be_bytes([
                                     binary[3], binary[2], binary[1], binary[0],
                                 ]);
@@ -187,7 +187,7 @@ async fn stream(
             };
 
             let mut rooms = ROOMS.lock().await;
-            let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
+            let room: &mut Room = rooms.get_mut(&request.room_id).unwrap();
             let group_manager = room.group_manager();
             let group_manager = group_manager.write().await;
             let _ = group_manager.leave_group(stream.clone(), id).await;

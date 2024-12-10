@@ -17,11 +17,11 @@ use crate::route::*;
 use crate::AppState;
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
+struct RequestJson {
     room_id: i32,
-    room_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
+    shared_key: String,
 }
 
 pub fn route() -> Router<AppState> {
@@ -31,16 +31,16 @@ pub fn route() -> Router<AppState> {
 async fn infos(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /stream/infos");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (room, client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -48,7 +48,7 @@ async fn infos(Path(params): Path<HashMap<String, String>>) -> Result<Response> 
         Err(err_response) => return Ok(err_response),
     };
 
-    if !client.check_token(json.user_token.clone()) {
+    if !client.check_token(request.token.clone()) {
         return Ok(http::create_response(
             Body::from(BodyUtil::INVILED_TOKEN),
             StatusCode::NOT_ACCEPTABLE,
@@ -65,6 +65,8 @@ async fn infos(Path(params): Path<HashMap<String, String>>) -> Result<Response> 
         .map(|forward_info| forward_info.into())
         .collect();
     drop(forwarder);
-    let json = serde_json::to_string(&infos).unwrap();
-    return Ok(http::create_response(json.into(), StatusCode::OK));
+    return Ok(http::create_response(
+        serde_json::to_string(&infos).unwrap().into(),
+        StatusCode::OK,
+    ));
 }

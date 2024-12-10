@@ -21,38 +21,38 @@ pub fn route() -> Router<AppState> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
-    user_name: String,
-    room_id: i32,
-    room_key: String,
+struct RequestJson {
+    name: String,
+    id: i32,
+    shared_key: String,
     master_key: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct RESPONSE {
-    user_id: i32,
-    user_token: u32,
+struct ResponseJson {
+    id: i32,
+    token: u32,
 }
 
 async fn room_join(Path(params): Path<HashMap<String, String>>) -> Result<Response> {
     debug!("HTTP GET /room/join");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let mut rooms = ROOMS.lock().await;
 
-    if !rooms.contains_key(&json.room_id) {
+    if !rooms.contains_key(&request.id) {
         return Ok(http::create_response(
             Body::from(BodyUtil::ROOM_ID_NOTFOUND),
             StatusCode::NOT_ACCEPTABLE,
         ));
     }
 
-    let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
-    if !room.auth_room_key(json.room_key.clone()) {
+    let room: &mut Room = rooms.get_mut(&request.id).unwrap();
+    if !room.auth_shared_key(request.shared_key.clone()) {
         return Ok(http::create_response(
             Body::from(BodyUtil::INVILED_PASSWORD),
             StatusCode::NOT_ACCEPTABLE,
@@ -60,13 +60,13 @@ async fn room_join(Path(params): Path<HashMap<String, String>>) -> Result<Respon
     }
 
     let mut user_id = i32::default();
-    let mut user_token = u32::default();
+    let mut token = u32::default();
     if !room
         .join(
-            json.user_name.clone(),
-            json.master_key.clone(),
+            request.name.clone(),
+            request.master_key.clone(),
             &mut user_id,
-            &mut user_token,
+            &mut token,
         )
         .await?
     {
@@ -76,11 +76,11 @@ async fn room_join(Path(params): Path<HashMap<String, String>>) -> Result<Respon
         ));
     }
 
-    let json = RESPONSE {
-        user_id: user_id.clone(),
-        user_token: user_token.clone(),
+    let response = ResponseJson {
+        id: user_id.clone(),
+        token: token.clone(),
     };
-    let body = serde_json::to_string(&json).unwrap().to_string();
+    let body = serde_json::to_string(&response).unwrap().to_string();
 
     return Ok(http::create_response(Body::from(body), StatusCode::OK));
 }

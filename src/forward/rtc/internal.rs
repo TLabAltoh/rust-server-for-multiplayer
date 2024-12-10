@@ -69,8 +69,8 @@ pub(crate) struct PeerForwardInternal {
 
 impl PeerForwardInternal {
     pub(crate) fn new(stream: impl ToString, ice_server: Vec<RTCIceServer>) -> Self {
-        let publish_tracks_change = broadcast::channel(1024);
-        let data_channel_forward_channel = broadcast::channel(1024);
+        let publish_tracks_change = broadcast::channel(128);
+        let data_channel_forward_channel = broadcast::channel(128);
         let data_channel_forward = DataChannelForward {
             sender: data_channel_forward_channel.0,
             _receiver: Arc::new(data_channel_forward_channel.1),
@@ -221,13 +221,13 @@ impl PeerForwardInternal {
 
             let is_broadcast = buffer[1..5] == buffer[5..9];
             if is_broadcast {
-                debug!("[rtc] send broadcast message");
+                //debug!("[rtc] send broadcast message");
                 if let Err(err) = group_sender.send(buffer[..n + 5].to_vec()) {
                     info!("send data channel err: {}", err);
                     return;
                 }
             } else {
-                debug!("[rtc] send unicast message");
+                //debug!("[rtc] send unicast message");
                 let to = u32::from_be_bytes([buffer[8], buffer[7], buffer[6], buffer[5]]);
                 let user_sender_map = user_sender_map.read().await;
                 if let Some(user_sender) = user_sender_map.get(&to) {
@@ -492,7 +492,7 @@ impl PeerForwardInternal {
         dc: Arc<RTCDataChannel>,
     ) -> Result<()> {
         let group_sender = self.data_channel_forward.sender.clone();
-        let (user_sender, _user_receiver) = broadcast::channel(32);
+        let (user_sender, _user_receiver) = broadcast::channel(128);
 
         let mut user_sender_map = self.user_sender_map.write().await;
         user_sender_map.insert(id.clone(), user_sender.clone());

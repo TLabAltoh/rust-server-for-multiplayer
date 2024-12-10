@@ -24,17 +24,17 @@ pub fn route() -> Router<AppState> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct JSON {
+struct RequestJson {
     room_id: i32,
-    room_key: String,
     user_id: i32,
-    user_token: u32,
+    token: u32,
     stream: String,
     offer: String,
+    shared_key: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct SIGNALING {
+struct SignalingJson {
     is_candidate: bool,
     sdp: String,
     session: String,
@@ -47,16 +47,16 @@ async fn whip(
 ) -> Result<Response> {
     debug!("HTTP GET /stream/whip");
 
-    let json: JSON = match parse_base64_into_json(&params) {
-        Ok(json) => json,
+    let request: RequestJson = match parse_base64_into_json(&params) {
+        Ok(request) => request,
         Err(err_response) => return Ok(err_response),
     };
 
     let (_room, client) = match auth_user(
-        json.room_id.clone(),
-        json.room_key.clone(),
-        json.user_id,
-        json.user_token,
+        request.room_id.clone(),
+        request.shared_key.clone(),
+        request.user_id,
+        request.token,
     )
     .await
     {
@@ -65,18 +65,18 @@ async fn whip(
     };
 
     return Ok(ws.on_upgrade(|mut socket: WebSocket| {
-        let json = json;
+        let request = request;
         Box::pin(async move {
-            let stream = json.stream;
-            let id = json.user_id as u32;
-            let offer = RTCSessionDescription::offer(json.offer).unwrap();
+            let stream = request.stream;
+            let id = request.user_id as u32;
+            let offer = RTCSessionDescription::offer(request.offer).unwrap();
 
             let mut rooms = ROOMS.lock().await;
-            if !rooms.contains_key(&json.room_id) {
+            if !rooms.contains_key(&request.room_id) {
                 error!("room does not exist");
             }
 
-            let room: &mut Room = rooms.get_mut(&json.room_id).unwrap();
+            let room: &mut Room = rooms.get_mut(&request.room_id).unwrap();
             let forwarder = room.forwarder();
             let forwarder = forwarder.write().await;
 
@@ -114,7 +114,7 @@ async fn whip(
             let mut client = client;
             let _ = client.add_stream(stream.clone()).await;
 
-            let answer = SIGNALING {
+            let answer = SignalingJson {
                 is_candidate: false,
                 sdp: answer.sdp,
                 session: session,
@@ -133,7 +133,7 @@ async fn whip(
 
             let mut send_task = tokio::spawn(async move {
                 while let Some((peer_connected, candidate)) = rx0.recv().await {
-                    let signaling = SIGNALING {
+                    let signaling = SignalingJson {
                         is_candidate: true,
                         sdp: String::new(),
                         session: String::new(),
@@ -160,11 +160,12 @@ async fn whip(
 
                             debug!("signaling message received: {}", message.clone());
 
-                            let json: SIGNALING = serde_json::from_str(&message.as_str()).unwrap();
+                            let signaling: SignalingJson =
+                                serde_json::from_str(&message.as_str()).unwrap();
 
                             let _ = peer
                                 .add_ice_candidate(RTCIceCandidateInit {
-                                    candidate: json.candidate.clone(),
+                                    candidate: signaling.candidate.clone(),
                                     ..Default::default()
                                 })
                                 .await;
