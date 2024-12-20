@@ -69,8 +69,8 @@ pub(crate) struct PeerForwardInternal {
 
 impl PeerForwardInternal {
     pub(crate) fn new(stream: impl ToString, ice_server: Vec<RTCIceServer>) -> Self {
-        let publish_tracks_change = broadcast::channel(128);
-        let data_channel_forward_channel = broadcast::channel(128);
+        let publish_tracks_change = broadcast::channel(100);
+        let data_channel_forward_channel = broadcast::channel(100);
         let data_channel_forward = DataChannelForward {
             sender: data_channel_forward_channel.0,
             _receiver: Arc::new(data_channel_forward_channel.1),
@@ -85,7 +85,7 @@ impl PeerForwardInternal {
             publish: RwLock::new(None),
             publish_tracks: Arc::new(RwLock::new(Vec::new())),
             publish_tracks_change,
-            publish_rtcp_channel: broadcast::channel(48),
+            publish_rtcp_channel: broadcast::channel(100),
             subscribe_group: RwLock::new(Vec::new()),
             user_sender_map: Arc::new(RwLock::new(HashMap::new())),
             data_channel_forward,
@@ -492,7 +492,7 @@ impl PeerForwardInternal {
         dc: Arc<RTCDataChannel>,
     ) -> Result<()> {
         let group_sender = self.data_channel_forward.sender.clone();
-        let (user_sender, _user_receiver) = broadcast::channel(128);
+        let (user_sender, _user_receiver) = broadcast::channel(100);
 
         let mut user_sender_map = self.user_sender_map.write().await;
         user_sender_map.insert(id.clone(), user_sender.clone());
@@ -626,7 +626,7 @@ impl PeerForwardInternal {
         dc: Arc<RTCDataChannel>,
     ) -> Result<()> {
         let group_sender = self.data_channel_forward.sender.clone();
-        let (user_sender, _user_receiver) = broadcast::channel(32);
+        let (user_sender, _user_receiver) = broadcast::channel(100);
 
         let mut user_sender_map = self.user_sender_map.write().await;
         user_sender_map.insert(id.clone(), user_sender.clone());

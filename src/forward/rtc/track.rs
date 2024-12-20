@@ -18,7 +18,7 @@ pub(crate) struct PublishTrackRemote {
 
 impl PublishTrackRemote {
     pub async fn new(stream: String, id: String, track: Arc<TrackRemote>) -> Self {
-        let (rtp_sender, mut rtp_recv) = broadcast::channel(128);
+        let (rtp_sender, mut rtp_recv) = broadcast::channel(100);
         tokio::spawn(async move { while rtp_recv.recv().await.is_ok() {} });
         let rid = track.rid().to_owned();
         let kind = track.kind();
