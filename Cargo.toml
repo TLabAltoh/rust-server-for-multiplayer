@@ -52,4 +52,4 @@ libws = { path = "libs/libws" }
 utils = { path = "libs/utils" }
 signal = { path = "libs/signal" }
 
-webrtc = { git = "https://github.com/webrtc-rs/webrtc.git", version = "0.11.0" }
+webrtc = { git = "https://github.com/webrtc-rs/webrtc.git", version = "0.12.0" }
