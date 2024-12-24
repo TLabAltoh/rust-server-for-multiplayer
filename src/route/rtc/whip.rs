@@ -10,6 +10,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use webrtc::ice_transport::ice_candidate::{RTCIceCandidate, RTCIceCandidateInit};
+use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 
 use tracing::{debug, error};
@@ -133,6 +134,9 @@ async fn whip(
 
             let mut send_task = tokio::spawn(async move {
                 while let Some((peer_connected, candidate)) = rx0.recv().await {
+                    if peer_connected {
+                        return;
+                    }
                     let signaling = SignalingJson {
                         is_candidate: true,
                         sdp: String::new(),
@@ -140,7 +144,7 @@ async fn whip(
                         candidate: candidate,
                     };
                     let msg = ws::Message::Text(serde_json::to_string(&signaling).unwrap());
-                    if sender.send(msg).await.is_err() || peer_connected {
+                    if sender.send(msg).await.is_err() {
                         return;
                     }
                 }
@@ -156,6 +160,10 @@ async fn whip(
 
                     match msg {
                         ws::Message::Text(t) => {
+                            if peer.connection_state() == RTCPeerConnectionState::Connected {
+                                return;
+                            }
+
                             let message = t.clone();
 
                             debug!("signaling message received: {}", message.clone());

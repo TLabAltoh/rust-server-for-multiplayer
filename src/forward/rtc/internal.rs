@@ -586,59 +586,59 @@ impl PeerForwardInternal {
                 .sender()
                 .await;
 
-            // let track = Arc::new(TrackLocalStaticRTP::new(
-            //     if kind == RTPCodecType::Video {
-            //         RTCRtpCodecCapability {
-            //             mime_type: MIME_TYPE_VP8.to_owned(),
-            //             clock_rate: 90000,
-            //             channels: 0,
-            //             sdp_fmtp_line: "".to_owned(),
-            //             rtcp_feedback: vec![
-            //                 RTCPFeedback {
-            //                     typ: "goog-remb".to_owned(),
-            //                     parameter: "".to_owned(),
-            //                 },
-            //                 RTCPFeedback {
-            //                     typ: "ccm".to_owned(),
-            //                     parameter: "fir".to_owned(),
-            //                 },
-            //                 RTCPFeedback {
-            //                     typ: "nack".to_owned(),
-            //                     parameter: "".to_owned(),
-            //                 },
-            //                 RTCPFeedback {
-            //                     typ: "nack".to_owned(),
-            //                     parameter: "pli".to_owned(),
-            //                 },
-            //             ],
-            //         }
-            //     } else {
-            //         RTCRtpCodecCapability {
-            //             mime_type: MIME_TYPE_OPUS.to_owned(),
-            //             clock_rate: 48000,
-            //             channels: 2,
-            //             sdp_fmtp_line: "minptime=10;useinbandfec=1".to_owned(),
-            //             rtcp_feedback: vec![],
-            //         }
-            //     },
-            //     "webrtc".to_string(),
-            //     format!("{}-{}", "webrtc", kind),
-            // ));
+            let track = Arc::new(TrackLocalStaticRTP::new(
+                if kind == RTPCodecType::Video {
+                    RTCRtpCodecCapability {
+                        mime_type: MIME_TYPE_VP8.to_owned(),
+                        clock_rate: 90000,
+                        channels: 0,
+                        sdp_fmtp_line: "".to_owned(),
+                        rtcp_feedback: vec![
+                            RTCPFeedback {
+                                typ: "goog-remb".to_owned(),
+                                parameter: "".to_owned(),
+                            },
+                            RTCPFeedback {
+                                typ: "ccm".to_owned(),
+                                parameter: "fir".to_owned(),
+                            },
+                            RTCPFeedback {
+                                typ: "nack".to_owned(),
+                                parameter: "".to_owned(),
+                            },
+                            RTCPFeedback {
+                                typ: "nack".to_owned(),
+                                parameter: "pli".to_owned(),
+                            },
+                        ],
+                    }
+                } else {
+                    RTCRtpCodecCapability {
+                        mime_type: MIME_TYPE_OPUS.to_owned(),
+                        clock_rate: 48000,
+                        channels: 2,
+                        sdp_fmtp_line: "minptime=10;useinbandfec=1".to_owned(),
+                        rtcp_feedback: vec![],
+                    }
+                },
+                "webrtc".to_string(),
+                format!("{}-{}", "webrtc", kind),
+            ));
 
-            // // ssrc for sdp
-            // let _ = sender.replace_track(Some(track)).await;
-            // info!(
-            //     "[{}] new sender , kind : {}, ssrc : {}",
-            //     get_peer_id(peer),
-            //     kind,
-            //     sender
-            //         .get_parameters()
-            //         .await
-            //         .encodings
-            //         .first()
-            //         .unwrap()
-            //         .ssrc
-            // );
+            // ssrc for sdp
+            let _ = sender.replace_track(Some(track)).await;
+            info!(
+                "[{}] new sender , kind : {}, ssrc : {}",
+                get_peer_id(peer),
+                kind,
+                sender
+                    .get_parameters()
+                    .await
+                    .encodings
+                    .first()
+                    .unwrap()
+                    .ssrc
+            );
             Some(sender)
         } else {
             None

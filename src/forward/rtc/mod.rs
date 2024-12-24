@@ -116,7 +116,9 @@ impl PeerForward {
                     );
                     match s {
                         RTCPeerConnectionState::Connected => {
-                            (on_peer_connected.lock().await)().await;
+                            let mut on_peer_connected = on_peer_connected.lock().await;
+                            on_peer_connected().await;
+                            drop(on_peer_connected);
                         }
                         RTCPeerConnectionState::Failed | RTCPeerConnectionState::Disconnected => {
                             let _ = pc.close().await;
@@ -191,7 +193,9 @@ impl PeerForward {
                     );
                     match s {
                         RTCPeerConnectionState::Connected => {
-                            (on_peer_connected.lock().await)().await;
+                            let mut on_peer_connected = on_peer_connected.lock().await;
+                            on_peer_connected().await;
+                            drop(on_peer_connected);
                         }
                         RTCPeerConnectionState::Failed | RTCPeerConnectionState::Disconnected => {
                             let _ = pc.close().await;
