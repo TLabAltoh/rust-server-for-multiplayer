@@ -113,7 +113,13 @@ impl Client {
                 ice_servers.push(RTCIceServer {
                     urls: vec![link.uri.to_string().replacen("://", ":", 1)],
                     username: link.queries.remove("username").unwrap_or("".to_owned()),
-                    credential: link.queries.remove("credential").unwrap_or("".to_owned())
+                    credential: link.queries.remove("credential").unwrap_or("".to_owned()),
+                    credential_type: link
+                        .params
+                        .remove("credential-type")
+                        .unwrap_or("".to_owned())
+                        .as_str()
+                        .into(),
                 })
             }
         }

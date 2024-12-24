@@ -138,6 +138,7 @@ fn default_ice_servers() -> Vec<IceServer> {
         urls: vec!["stun:stun.l.google.com:19302".to_string()],
         username: "".to_string(),
         credential: "".to_string(),
+        credential_type: "".to_string(),
     }]
 }
 
@@ -167,6 +168,8 @@ pub struct IceServer {
     pub username: String,
     #[serde(default)]
     pub credential: String,
+    #[serde(default)]
+    pub credential_type: String,
 }
 
 // from https://github.com/webrtc-rs/webrtc/blob/71157ba2153a891a8cfd819f3cf1441a7a0808d8/webrtc/src/ice_transport/ice_server.rs
@@ -209,6 +212,7 @@ impl From<IceServer> for RTCIceServer {
             urls: val.urls,
             username: val.username,
             credential: val.credential,
+            credential_type: val.credential_type.as_str().into(),
         }
     }
 }
