@@ -7,6 +7,8 @@ This is an SFU server for relaying [WebRTC](https://webrtc.org/?hl=en) and [WebS
 > [!WARNING]  
 > I am not a member or contributor of [original source](https://github.com/binbat/live777). Please note that my modification may have dropped original source's critical features. 
 
+[sample unity project is here](https://github.com/TLabAltoh/Unity-SFU-Integration.git)
+
 ## Get Started
 
 ### Run
