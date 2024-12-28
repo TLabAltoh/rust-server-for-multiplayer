@@ -19,6 +19,9 @@ This is an SFU server for relaying [WebRTC](https://webrtc.org/?hl=en) and [WebS
 ### WebSocket
 - [x] ```Binary```
 - [ ] ```Text (No plans at the moment.)```
+### Network Event
+- [x] ```OnOpen / OnOpen(userId)```
+- [x] ```OnClose / OnClose(userId)```
 
 ## Overview
 <img src="media/graph.0.drawio.svg" width="512"></img>
