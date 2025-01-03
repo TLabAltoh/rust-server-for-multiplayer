@@ -219,9 +219,9 @@ impl From<IceServer> for RTCIceServer {
 
 impl Config {
     pub(crate) fn parse(path: Option<String>) -> Self {
-        let result = fs::read_to_string(path.unwrap_or(String::from("unity-rust-sfu.toml")))
+        let result = fs::read_to_string(path.unwrap_or(String::from("rust-server-for-multiplayer.toml")))
             .or(fs::read_to_string(
-                "/etc/unity-rust-sfu/unity-rust-sfu.toml",
+                "/etc/rust-server-for-multiplayer/rust-server-for-multiplayer.toml",
             ))
             .unwrap_or("".to_string());
         let cfg: Self = toml::from_str(result.as_str()).expect("config parse error");

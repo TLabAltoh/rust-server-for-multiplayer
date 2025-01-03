@@ -1,4 +1,4 @@
 clear
 
-target\debug\unity-rust-sfu.exe --config cnf\unity-rust-sfu.toml
+target\debug\rust-server-for-multiplayer.exe --config cnf\rust-server-for-multiplayer.toml
 

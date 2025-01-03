@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/unity-rust-sfu
+ExecStart=/usr/bin/rust-server-for-multiplayer
 Restart=on-failure
 RestartSec=5s
 

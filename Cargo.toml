@@ -1,5 +1,5 @@
 [package]
-name = "unity-rust-sfu"
+name = "rust-server-for-multiplayer"
 version = "0.1.0"
 edition = "2021"
 

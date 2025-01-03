@@ -100,7 +100,7 @@ struct Args {
 async fn main() -> Result<()> {
     let args = Args::parse();
     let cfg = Config::parse(args.config);
-    utils::set_log(format!("unity_rust_sfu={},webrtc=error", cfg.log.level));
+    utils::set_log(format!("rust_server_for_multiplayer={},webrtc=error", cfg.log.level));
 
     warn!("set log level : {}", cfg.log.level);
     debug!("config : {:?}", cfg);

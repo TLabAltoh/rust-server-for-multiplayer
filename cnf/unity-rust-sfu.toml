@@ -14,19 +14,19 @@ urls = [
 
 # [[ice_servers]]
 # urls = [ "turn:turn.22333.fun", "turn:cn.22333.fun" ]
-# username = "unity-rust-sfu"
-# credential = "unity-rust-sfu"
+# username = "rust-server-for-multiplayer"
+# credential = "rust-server-for-multiplayer"
 # credential_type = "password"
 
 # Headers["Authorization"] = "Bearer {token}"
 # [auth]
-# tokens = ["unity-rust-sfu"]
+# tokens = ["rust-server-for-multiplayer"]
 
 # https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#basic
 # Headers["Authorization"] = "Basic {Base64.encode({username}:{password})}"
 # [[auth.accounts]]
-# username = "unity-rust-sfu"
-# password = "unity-rust-sfu"
+# username = "rust-server-for-multiplayer"
+# password = "rust-server-for-multiplayer"
 
 [log]
 # Env: `LOG_LEVEL`

@@ -3,6 +3,6 @@ use prometheus::{Registry, TextEncoder};
 
 lazy_static! {
     pub static ref REGISTRY: Registry =
-        Registry::new_custom(Some("unity-rust-sfu".to_string()), None).unwrap();
+        Registry::new_custom(Some("rust-server-for-multiplayer".to_string()), None).unwrap();
     pub static ref ENCODER: TextEncoder = TextEncoder::new();
 }
