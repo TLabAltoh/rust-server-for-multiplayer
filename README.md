@@ -26,7 +26,7 @@ This is an SFU (Selectable Forwarding Unit) server for relaying [WebRTC](https:/
 ## Overview
 <img src="media/graph.0.drawio.svg" width="512"></img>
 
-In this repository, you can use ```whep``` without ```whip``` in ```WebRTC```. When ```whep``` is called without ```whip```, the server prepares the dummy ```whip```. it assumes use cases for datastreams that do not need an owner (like synchronising the transform of a game object and so on ...).
+In this repository, you can use ```whep``` without ```whip``` in ```WebRTC```. When ```whep``` is called without ```whip```, the server prepares the dummy ```whip```. it assumes use cases for data streams that do not need an owner (like synchronising the transform of a gameobject and so on ...).
 
 ## Get Started
 
