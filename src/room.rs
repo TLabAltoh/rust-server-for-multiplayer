@@ -179,7 +179,7 @@ impl Room {
         Ok(false)
     }
 
-    async fn _join(&self, user_id: i32, _token: u32) -> Result<()> {
+    async fn do_join(&self, user_id: i32, _token: u32) -> Result<()> {
         let group_manager = self.group_manager();
         let group_manager = group_manager.write().await;
         group_manager.init_user(user_id as u32).await;
@@ -238,7 +238,7 @@ impl Room {
             *user_id,
             Client::new(user_id.clone(), token.clone(), user_name.clone()).await?,
         );
-        self._join(user_id.clone(), token.clone()).await?;
+        self.do_join(user_id.clone(), token.clone()).await?;
 
         Ok(true)
     }
