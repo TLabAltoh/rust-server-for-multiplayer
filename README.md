@@ -48,7 +48,7 @@ build-*.bat
 
 ```bat
 cd REPOSITORY_ROOT
-run.bat
+run-*.bat
 ```
 
 ### Client implementation Sample and Debug with browser
@@ -67,7 +67,7 @@ mkdir assets\webui\media
 #### Chrome
 ```bat
 cd REPOSITORY_ROOT
-run.bat
+run-debug.bat
 
 start chrome http://localhost:7777 --auto-open-devtools-for-tabs
 ```
@@ -75,7 +75,7 @@ start chrome http://localhost:7777 --auto-open-devtools-for-tabs
 #### Firefox
 ```bat
 cd REPOSITORY_ROOT
-run.bat
+run-debug.bat
 
 start firefox http://localhost:7777 -devtools
 ```
