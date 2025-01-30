@@ -67,7 +67,7 @@ pub struct UserTask {
 
 impl Group {
     pub fn new(name: String, capacity: Option<usize>) -> Group {
-        let (tx, _rx) = broadcast::channel(capacity.unwrap_or(100));
+        let (tx, _rx) = broadcast::channel(capacity.unwrap_or(64));
         Group {
             name,
             tx,
@@ -90,7 +90,7 @@ impl Group {
             std::collections::hash_map::Entry::Occupied(_o) => {}
             std::collections::hash_map::Entry::Vacant(v) => {
                 let (user_sender, _receiver) =
-                    broadcast::channel::<Vec<u8>>(capacity.unwrap_or(100));
+                    broadcast::channel::<Vec<u8>>(capacity.unwrap_or(64));
                 let mut user_senders = self.user_senders.write().unwrap();
                 user_senders.insert(user, user_sender.clone());
 

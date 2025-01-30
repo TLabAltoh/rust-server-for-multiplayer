@@ -115,7 +115,7 @@ impl SubscribeRTCPeerConnection {
         info!("[{}] [{}] {} up", stream, id, kind);
         let mut pre_rid: Option<String> = None;
         // empty broadcast channel
-        let (virtual_sender, _) = broadcast::channel::<ForwardData>(100);
+        let (virtual_sender, _) = broadcast::channel::<ForwardData>(1);
         let mut recv = virtual_sender.subscribe();
         let mut track = None;
         let mut sequence_number: u16 = 0;
